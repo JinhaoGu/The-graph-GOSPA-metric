@@ -1,4 +1,4 @@
-function [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=LPgraphMetric_directed(X, Y, c, p,epsilon)
+function [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=extended_LPgraphGOSPA(X, Y, c, p,epsilon)
 
 nx = size(X.xState, 1);
 ny = size(Y.xState, 1);
@@ -16,7 +16,7 @@ end
 %%%%%%%%%% localisation cost computation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 DAB = locCostComp_v2(X, Y, c, p);
 
-[Wx,dxy,loc_cost, miss_cost, fa_cost, edge_cost]=LP_graph_metric(X,Y,DAB,nx,ny,c,p,epsilon);
+[dxy,loc_cost, miss_cost, fa_cost, edge_cost]=LP_graph_metric(X,Y,DAB,nx,ny,c,p,epsilon);
 
 end
 
@@ -128,10 +128,10 @@ A_adj1=repmat([X.adj,zeros(nx,1)],1,ny);
 ind=repmat(1:nx,ny,1);
 ind=ind(:);
 new_adj=zeros(nxny,(nx+1)*ny);
-% new_adj=[];
+
 for i =1:nx*ny
     new_adj(i,:)=A_adj1(ind(i),:);
-%     new_adj=[new_adj;A_adj1(ind(i),:)];
+
 end
 new_adj=sparse(new_adj);
 A_adj_1=[mask.*new_adj,zeros(nxny,nx+1)];
@@ -141,7 +141,7 @@ index_2_x=repmat(1:nxny,ny,1);
 index_2_x=index_2_x(:);
 index_2_y=repmat(1:nx+1:(nx+1)/nx*nxny,nx,1);
 index_2_y2=repmat((0:nx-1)',1,size(index_1_y,2));
-% index_2_y3=repmat((0:ny-1),1,size(index_1_y,2));
+
 index_2_y=index_2_y2+index_2_y;
 index_2_y=repmat(index_2_y',ny,1);
 index_2_y=index_2_y(:);
@@ -151,10 +151,10 @@ A_adj2=repmat(Y.adj',nx,1); %Need a transpose for adjacency matrix
 ind=repmat(1:ny,nx+1,1);
 ind=ind(:);
 new_adj=zeros(nxny,(nx+1)*ny);
-% new_adj=[];
+
 for i =1:(nx+1)*ny
     new_adj(:,i)=A_adj2(:,ind(i));
-%     new_adj=[new_adj,A_adj2(:,ind(i))];
+
 end
 
 A_adj_2=[mask.*new_adj,zeros(nxny,nx+1)];
@@ -187,7 +187,6 @@ new_adj=zeros(nxny,ny*(nx+1));
 
 for i =1:nx*ny
     new_adj(:,ind(i))=A_adj3(:,i);
-%     new_adj=[new_adj;A_adj1(ind(i),:)];
 end
 new_adj=sparse(new_adj);
 A_adj_3=[mask.*new_adj,zeros(nxny,nx+1)];
@@ -198,9 +197,7 @@ index_2_x=repmat(1:nxny,nx,1);
 index_2_x=index_2_x(:);
 
 index_2_y=repmat(1:nx+1:(nx+1)*ny,nx,1);
-% index_2_y=repmat(1:ny+1:(ny+1)/ny*nxny,nx,1);
 index_2_y2=repmat((0:nx-1)',1,ny);
-% % index_2_y3=repmat((0:ny-1),1,size(index_1_y,2));
 index_2_y=index_2_y2+index_2_y;
 index_2_y=repmat(index_2_y',1,nx)';
 index_2_y=index_2_y(:);
@@ -208,17 +205,6 @@ index_2_y=index_2_y(:);
 
 mask=sparse(index_2_x,index_2_y,1,nxny,ny*(nx+1));
 A_adj4=repmat([X.adj',zeros(nx,1)],ny,ny); %Need a transpose for adjacency matrix 
-% ind=repmat(1:ny+1:nxny,nx,1);
-% ind2=repmat((0:nx-1)',1,size(ind,2));
-% ind=(ind2+ind)';
-% ind=repmat(1:nxny,nx,1)
-% ind=ind(:);
-% new_adj=zeros(nxny,(nx+1)*ny);
-% new_adj=[];
-% for i =1:nx*ny
-    % new_adj(i,:)=A_adj4(ind(i),:);
-%     new_adj=[new_adj,A_adj2(:,ind(i))];
-% end
 new_adj=A_adj4;
 A_adj_4=[mask.*new_adj,zeros(nxny,nx+1)];
 
@@ -247,7 +233,6 @@ Wx = reshape(x(1:WLen),[nx+1,ny+1]);
 loc_cost=sum(DAB(1:nx,1:ny).*Wx(1:nx,1:ny),"all")^(1/p);
 fa_cost=sum(DAB(nx+1,1:ny).*Wx(nx+1,1:ny))^(1/p);
 miss_cost=sum(DAB(1:nx,ny+1).*Wx(1:nx,1+ny))^(1/p);
-% edge_cost=epsilon^p*sum(abs(X.adj*Wx(1:nx,1:ny)-Wx(1:nx,1:ny)*Y.adj),'all');
 edge_cost=epsilon^p/4*(x(e1Pos)+x(e2Pos))^(1/p);
 %%% TO DO
 
@@ -255,7 +240,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function locCostMat = locCostComp_v2(X, Y, c, p)
-% function locCostMat = locCostComp(stMat, X, Y, c, p)
+
 % computing the localisation cost for every (i,j)
 nx = size(X.xState, 1);
 ny = size(Y.xState, 1);
