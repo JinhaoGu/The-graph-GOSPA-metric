@@ -2,7 +2,7 @@ clc;
 clear;
 %% parameters pre-setting
 
-example_id=11;%0-3, example 1; 4-7,example2; 8-11,example3.
+example_id=1;%0-3, example 1 undirected graphs; 4-7,example2 undirected graphs; 8-11,example3_directed graphs.
 
 c=3; 
 p=1; 
@@ -19,7 +19,7 @@ Y = struct('xState', [], 'adj', []);
 
 %Parameters to define sets of graphs
  delVal = 1;
- DelVal = 0.2;
+ DelVal = 0.7;
  switch example_id
     case 0
         % Example 1a
@@ -200,9 +200,8 @@ Y = struct('xState', [], 'adj', []);
 %%
 if (example_id<=7)
     [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=LPgraphGOSPA(X,Y,c,p,epsilon);
-
 else
-    [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=extended_LPgraphGOSPA(X,Y,c,p,epsilon);
+    [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=LPgraphGOSPA_directed(X,Y,c,p,epsilon);
 
 end
  %%
@@ -216,6 +215,37 @@ disp('Miss Detection Cost')
 disp(miss_cost)
 disp('Edge Mismatch Cost')
 disp(edge_cost)
+%%
+if (example_id<=7)
+    Gx=graph(X.adj);
+    Gy=graph(Y.adj);
+    figure(1);
+    clf
+    hold on
+    plot(Gx,'XData',X.xState(:,1),'YData',X.xState(:,2),'Marker','x','MarkerSize',12,'NodeColor','b',LineWidth=2)
+    plot(Gy,'XData',Y.xState(:,1),'YData',Y.xState(:,2),'Marker','o','MarkerSize',12,'NodeColor','r',LineWidth=2)
+    
+    hold off
+    grid on
+    xlabel('Position X')
+    ylabel('Position Y')
+    title('Graphs (X in blue, Y in red)')
+else
+    Gx=digraph(X.adj);
+    Gy=digraph(Y.adj);
+    figure(1);
+    clf
+    hold on
+    plot(Gx,'XData',X.xState(:,1),'YData',X.xState(:,2),'Marker','x','MarkerSize',12,'NodeColor','b',LineWidth=2)
+    plot(Gy,'XData',Y.xState(:,1),'YData',Y.xState(:,2),'Marker','o','MarkerSize',12,'NodeColor','r',LineWidth=2)
+    
+    hold off
+    grid on
+    xlabel('Position X')
+    ylabel('Position Y')
+    title('Graphs (X in blue, Y in red)')
+end
+
 
 
 

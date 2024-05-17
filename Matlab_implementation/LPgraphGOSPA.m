@@ -22,7 +22,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% utils %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-function [Wx,dxy,loc_cost, miss_cost, fa_cost, edge_cost]=LP_graph_metric(X,Y,DAB,nx,ny,c,p,epsilon)
+function [dxy,loc_cost, miss_cost, fa_cost, edge_cost]=LP_graph_metric(X,Y,DAB,nx,ny,c,p,epsilon)
 % x = [W_1,1 W_2,1 .. W_nx+1,1, .. W_1,ny+1 W_2,ny+1 ...W_nx+1,ny+1,
 % e,
 % h_1,1 .. h_nx,ny ... h_1,1 ... h_nx,ny]'

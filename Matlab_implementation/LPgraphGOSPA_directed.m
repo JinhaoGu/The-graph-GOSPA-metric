@@ -1,4 +1,4 @@
-function [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=extended_LPgraphGOSPA(X, Y, c, p,epsilon)
+function [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=LPgraphGOSPA_directed(X, Y, c, p,epsilon)
 
 nx = size(X.xState, 1);
 ny = size(Y.xState, 1);
@@ -16,7 +16,7 @@ end
 %%%%%%%%%% localisation cost computation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 DAB = locCostComp_v2(X, Y, c, p);
 
-[dxy,loc_cost, miss_cost, fa_cost, edge_cost]=LP_graph_metric(X,Y,DAB,nx,ny,c,p,epsilon);
+[Wx,dxy,loc_cost, miss_cost, fa_cost, edge_cost]=LP_graph_metric(X,Y,DAB,nx,ny,c,p,epsilon);
 
 end
 

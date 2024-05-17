@@ -193,7 +193,7 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
 
 
 
-def extended_LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
+def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     '''
     Input:
     
