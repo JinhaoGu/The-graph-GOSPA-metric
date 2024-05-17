@@ -45,8 +45,8 @@ def locCostComp(X_attr,Y_attr,c,p):
 
 def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     '''
+    This function calculates the GOSPA metric between two undirected graphs using linear programming.
     Input:
-    
     X_attr: NxD array of node attributes for graph X
     Y_attr: MxD array of node attributes for graph Y
     X_adj: NxN symmetric adjacency matrix for graph X 
@@ -199,6 +199,7 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
 
 def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     '''
+    This function calculates the GOSPA metric between two directed graphs using linear programming.
     Input:
     
     X_attr: NxD array of node attributes for graph X
