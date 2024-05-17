@@ -1,3 +1,7 @@
+#Author: Jinhao Gu
+#This code is a python implementation of the graph GOSPA metric proposed in the paper 
+# "Graph GOSPA metric: a metric to measure the discrepancy between graphs of different sizes"
+# by Jinhao Gu, Á. F. García-Fernández, Robert E. Firth, Lennart Svensson
 import numpy as np
 import scipy.sparse as sps
 from scipy.optimize import linprog

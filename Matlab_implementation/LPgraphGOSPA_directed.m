@@ -1,4 +1,29 @@
 function [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=LPgraphGOSPA_directed(X, Y, c, p,epsilon)
+%Author: Jinhao Gu
+%This code is a python implementation of the graph GOSPA metric proposed in the paper 
+% "Graph GOSPA metric: a metric to measure the discrepancy between graphs of different sizes"
+% by Jinhao Gu, Á. F. García-Fernández, Robert E. Firth, Lennart Svensson
+% -------------------------------------------------------------------------
+% Input:
+% X, Y: graphs which are structs as follows:
+%   X.xState: ' nx x D' dimensional matrix, where 'D' is the dimension of
+%   node attributes, 'nx' is the number of nodes in 'X'. 
+%   X.adj: 'nx x nx' dimensional matrix, which is the adjacency matrix of
+%   graph 'X'.
+% c: >0, missed/false node penalty
+% p: >= 1, exponent parameter
+% epsilon: >0, edge mismatch penalty
+% -------------------------------------------------------------------------
+% Output:
+% dxy: Metric value
+% loc_cost: localisation cost (to the p-th power) for assigned nodes.
+% miss_cost: cost (to the p-th power) for missed nodes. 
+% fa_cost: cost (to the p-th power) for false nodes.
+% edge_cost: cost (to the p-th power) for edge mismatch in adjacency
+% matrix.
+% -------------------------------------------------------------------------
+
+
 
 nx = size(X.xState, 1);
 ny = size(Y.xState, 1);

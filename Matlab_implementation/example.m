@@ -2,7 +2,9 @@ clc;
 clear;
 %% parameters pre-setting
 
-example_id=1;%0-3, example 1 undirected graphs; 4-7,example2 undirected graphs; 8-11,example3_directed graphs.
+example_id=1;% 0-3, example 1 undirected graphs;
+             % 4-7,example2 undirected graphs; 
+             % 8-11,example3 directed graphs.
 
 c=3; 
 p=1; 
@@ -23,12 +25,12 @@ Y = struct('xState', [], 'adj', []);
  switch example_id
     case 0
         % Example 1a
-        %stDim Target state dimension
+        
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,1,1;1,0,1;1,1,0];
         ny = 3;
@@ -36,12 +38,12 @@ Y = struct('xState', [], 'adj', []);
         Y.adj = [0,1,1;1,0,1;1,1,0];
     case 1
         % Example 1b
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,1,1;1,0,1;1,1,0];
         ny = 3;
@@ -49,12 +51,12 @@ Y = struct('xState', [], 'adj', []);
         Y.adj = [0,1,0;1,0,1;0,1,0];
     case 2
         % Example 1c
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,1,1;1,0,1;1,1,0];
         ny = 2;
@@ -64,12 +66,12 @@ Y = struct('xState', [], 'adj', []);
 
     case 3
         % Example 1d
-        %stDim Target state dimension
+   
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20]; 
         X.adj = [0,1,1;1,0,1;1,1,0];
         ny = 3;
@@ -78,12 +80,12 @@ Y = struct('xState', [], 'adj', []);
 
     case 4
         % Example 2a
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20]; 
         X.adj = [0,0.3,0.7;0.3,0,0.5;0.7,0.5,0];
         ny = 3;
@@ -94,13 +96,13 @@ Y = struct('xState', [], 'adj', []);
     case 5
 
         % Example 2b
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
         
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,0.3,0.7;0.3,0,0.5;0.7,0.5,0];
         ny = 3;
@@ -110,13 +112,13 @@ Y = struct('xState', [], 'adj', []);
    case 6
 
         % Example 2c
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
         
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,0.3,0.7;0.3,0,0.5;0.7,0.5,0];
         ny = 3;
@@ -126,13 +128,13 @@ Y = struct('xState', [], 'adj', []);
       case 7
 
         % Example 2d
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
         
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,0.3,0.7;0.3,0,0.5;0.7,0.5,0];
         ny = 3;
@@ -141,12 +143,12 @@ Y = struct('xState', [], 'adj', []);
 
       case 8
         % Example 3a
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,1,0;0,0,1;1,0,0];
         ny = 3;
@@ -155,12 +157,12 @@ Y = struct('xState', [], 'adj', []);
 
         case 9
         % Example 3b
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,1,0;0,0,1;1,0,0];
         ny = 3;
@@ -170,12 +172,12 @@ Y = struct('xState', [], 'adj', []);
 
         case 10
         % Example 3c
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+          nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,1,0;0,0,1;1,0,0];
         ny = 3;
@@ -185,12 +187,12 @@ Y = struct('xState', [], 'adj', []);
 
         case 11
         % Example 3d
-        %stDim Target state dimension
+
         %nx: number of nodes in graph X
         %ny: number of nodes in graph Y
         %adj_x: adjacency matrix of x
         %adj_y: adjacency matrix of y
-        stDim = 1; nx = 3;
+        nx = 3;
         X.xState = [0,0;10,10;10,20];
         X.adj = [0,1,0;0,0,1;1,0,0];
         ny = 3;
