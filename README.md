@@ -24,7 +24,7 @@ X_adj=np.array([[0,1,1],[1,0,1],[1,1,0]])
 Y_attr= np.array([[0,0],[10,10],[10,20]])
 Y_adj=np.array([[0,1,1],[1,0,1],[1,1,0]])
 
-# define hyperparameters
+# choose parameters
 c=3 # penalty for missing or false nodes 
 p=1 # p-norm
 epsilon=1 # penalty for edge mismatch
@@ -51,6 +51,13 @@ ny = 3;
 Y.xState = [0,0;10,10;10,20]; %0,0;1,1.5;2,5
 Y.adj = [0,1,1;1,0,1;1,1,0];
 
+% choose the parameters
+c=3; %penalty for missing or false nodes 
+p=1; %p-norm
+epsilon=1; %penalty for edge mismatch
+
+
+
 % graph GOSPA for undirected graphs 
 [dxy,loc_cost,fa_cost,miss_cost,edge_cost]=LPgraphGOSPA(X,Y,c,p,epsilon);
 
@@ -60,7 +67,3 @@ Y.adj = [0,1,1;1,0,1;1,1,0];
 ```
 
 
-
-c=3; 
-p=1; 
-epsilon=1;
