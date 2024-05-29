@@ -51,12 +51,12 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     Y_attr: MxD array of node attributes for graph Y
     X_adj: NxN symmetric adjacency matrix for graph X 
     Y_adj: MxM symmetric adjacency matrix for graph Y
-    c: penalty for missing or false detection
+    c: penalty for missing or false nodes
     p: p-norm
     epsilon: penalty for edge mismatch
     
     Returns: 
-    GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
+    graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
     '''
     n_x=X_attr.shape[0]
     n_y=Y_attr.shape[0]
@@ -206,12 +206,12 @@ def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     Y_attr: MxD array of node attributes for graph Y
     X_adj: NxN adjacency matrix for graph X
     Y_adj: MxM adjacency matrix for graph Y
-    c: penalty for missing or false detection
+    c: penalty for missing or false nodes
     p: p-norm
     epsilon: penalty for edge mismatch
     
     Returns: 
-    GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
+    graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
     '''
     
     n_x=X_attr.shape[0]
