@@ -38,7 +38,7 @@ dxy,loc_cost,false_cost,miss_cost,edge_cost=LP_graph_GOSPA_directed(X_attr,Y_att
 
 ```
 
-### MATLAB
+### MATLAB:
 
 ```MATLAB
 % define graphs X and Y
