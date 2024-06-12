@@ -207,13 +207,13 @@ else
 
 end
  %%
-disp('Metric Value')
+disp('Graph GOSPA Metric Value')
 disp(dxy)
-disp('Localisation Cost')
+disp(‘Node attribute cost’)
 disp(loc_cost)
-disp('False Detection Cost')
+disp('False node cost')
 disp(fa_cost)
-disp('Miss Detection Cost')
+disp('Missed node cost')
 disp(miss_cost)
 disp('Edge Mismatch Cost')
 disp(edge_cost)
