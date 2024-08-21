@@ -1,10 +1,10 @@
 # The graph GOSPA metric
 
-This repository contains Matlab and Python code with the linear programming implementation of the graph generalised optimal subpattern assignment (GOSPA) metric proposed in [1]. The graph GOSPA metric is a mathematically principled metric that penalises node attribute error for properly assigned nodes, the number of missed nodes, false nodes, and edge mismatches. The repository contains the implementations for undirected graphs and for directed graphs.
+This repository contains Matlab and Python code with the linear programming implementation of the graph generalised optimal subpattern assignment (GOSPA) metric proposed in [1]. The graph GOSPA metric is a mathematically principled metric for graphs. Given two graphs, it penalises node attribute error for properly assigned nodes, the number of missed nodes, false nodes, and edge mismatches. The repository contains the implementations for undirected graphs and for directed graphs.
 
 The graph GOSPA metric is an extension of the GOSPA metric for sets of objects proposed in [2], which was also extended for sets of trajectories in [3].
 
-[1] https://arxiv.org/abs/2311.07596
+[1] J. Gu, A. F. García-Fernández, Robert E. Firth, L. Svensson, “Graph GOSPA metric: a metric to measure the discrepancy between graphs of different sizes” in IEEE Transactions on Signal Processing, 2024 (https://arxiv.org/abs/2311.07596)
 
 [2] A. S. Rahmathullah, Á. F. García-Fernández and L. Svensson, "Generalized optimal sub-pattern assignment metric," 2017 20th International Conference on Information Fusion (Fusion), Xi'an, China, 2017, pp. 1-8, doi: 10.23919/ICIF.2017.8009645.
 
