@@ -11,7 +11,7 @@ from scipy.optimize import linprog
 def computeLocCostPerTime(x,y,c,p):
     if np.all(~np.isnan(x)) & np.all(~np.isnan(y)):
         #neither x nor y has nan
-        return np.linalg.norm(x-y,p)**p
+        return np.linalg.norm(x-y)**p
 
     elif np.any(np.isnan(x) & ~np.isnan(y)) | np.any(~np.isnan(x) & np.isnan(y)):
         #exactly one of x or y has nan
@@ -191,9 +191,15 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     false_cost=np.sum(np.multiply(DAB[n_x,0:n_y],Wx[n_x,0:n_y]))
     miss_cost=np.sum(np.multiply(DAB[0:n_x,n_y],Wx[0:n_x,n_y]))
     edge_cost=epsilon**p/2 * W[e1Pos].item()
+    
+    
+    dxy=res.fun+1e-9
+    loc_cost=loc_cost+1e-9
+    false_cost=loc_cost+1e-9
+    miss_cost=miss_cost+1e-9
+    edge_cost=edge_cost+1e-9
 
-    return res.fun**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
-
+    return dxy**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
 
 
 
@@ -421,5 +427,11 @@ def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     false_cost=np.sum(np.multiply(DAB[n_x,0:n_y],Wx[n_x,0:n_y]))
     miss_cost=np.sum(np.multiply(DAB[0:n_x,n_y],Wx[0:n_x,n_y]))
     edge_cost=epsilon**p/4 * (W[e1Pos].item()+W[e2Pos].item())
-
-    return res.fun**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
+    
+    dxy=res.fun+1e-9
+    loc_cost=loc_cost+1e-9
+    false_cost=loc_cost+1e-9
+    miss_cost=miss_cost+1e-9
+    edge_cost=edge_cost+1e-9
+    
+    return dxy**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
