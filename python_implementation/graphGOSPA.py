@@ -11,7 +11,7 @@ from scipy.optimize import linprog
 def computeLocCostPerTime(x,y,c,p):
     if np.all(~np.isnan(x)) & np.all(~np.isnan(y)):
         #neither x nor y has nan
-        return np.linalg.norm(x-y)**p
+        return np.linalg.norm(x-y)**p # Use Euclidean distance as the cost function
 
     elif np.any(np.isnan(x) & ~np.isnan(y)) | np.any(~np.isnan(x) & np.isnan(y)):
         #exactly one of x or y has nan
@@ -192,13 +192,14 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     miss_cost=np.sum(np.multiply(DAB[0:n_x,n_y],Wx[0:n_x,n_y]))
     edge_cost=epsilon**p/2 * W[e1Pos].item()
     
-    
-    dxy=res.fun+1e-9
-    loc_cost=loc_cost+1e-9
-    false_cost=loc_cost+1e-9
-    miss_cost=miss_cost+1e-9
-    edge_cost=edge_cost+1e-9
 
+    # For numerical stability
+    dxy=np.max(res.fun,0)
+    loc_cost=np.max(loc_cost,0)
+    false_cost=np.max(false_cost,0)
+    miss_cost=np.max(miss_cost,0)
+    edge_cost=np.max(edge_cost,0)
+    
     return dxy**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
 
 
@@ -428,10 +429,11 @@ def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     miss_cost=np.sum(np.multiply(DAB[0:n_x,n_y],Wx[0:n_x,n_y]))
     edge_cost=epsilon**p/4 * (W[e1Pos].item()+W[e2Pos].item())
     
-    dxy=res.fun+1e-9
-    loc_cost=loc_cost+1e-9
-    false_cost=loc_cost+1e-9
-    miss_cost=miss_cost+1e-9
-    edge_cost=edge_cost+1e-9
+    # For numerical stability
+    dxy=np.max(res.fun,0)
+    loc_cost=np.max(loc_cost,0)
+    false_cost=np.max(false_cost,0)
+    miss_cost=np.max(miss_cost,0)
+    edge_cost=np.max(edge_cost,0)
     
     return dxy**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
