@@ -7,7 +7,6 @@ import scipy.sparse as sps
 from scipy.optimize import linprog
 
 
-
 def computeLocCostPerTime(x,y,c,p):
     if np.all(~np.isnan(x)) & np.all(~np.isnan(y)):
         #neither x nor y has nan
@@ -26,21 +25,120 @@ def locCostComp(X_attr,Y_attr,c,p):
     n_x=X_attr.shape[0]
     n_y=Y_attr.shape[0]
     tmpCost=c**p/2
-    locCostMat=np.zeros((n_x+1,n_y+1))
+    locCostMat=np.full((n_x+1,n_y+1),tmpCost)
+    locCostMat[-1,-1]=0
 
-    for i in range(n_x+1):
-        if i<=n_x-1:# x not dummy
-            for j in range(n_y+1):
-                if j<=n_y-1: # y not dummy
-                    locCostMat[i,j]=computeLocCostPerTime(X_attr[i,:],Y_attr[j,:],c,p)
-                else:
-                    locCostMat[i,j]=tmpCost
-        
-        else:
-            for j in range(n_y): # x is dummy
-                locCostMat[i,j]=tmpCost
+    if n_x>0 and n_y>0:
+        x_nan=np.isnan(X_attr)[:,None,:]
+        y_nan=np.isnan(Y_attr)[None,:,:]
+        no_hole=~(x_nan.any(axis=2) | y_nan.any(axis=2))
+        one_hole=(x_nan & ~y_nan).any(axis=2) | (~x_nan & y_nan).any(axis=2)
+        dist=np.linalg.norm(X_attr[:,None,:]-Y_attr[None,:,:],axis=2)
+        locCostMat[:n_x,:n_y]=np.where(no_hole,dist**p,np.where(one_hole,tmpCost,0.0))
 
     return locCostMat
+
+
+def _is_numeric_dtype(dtype):
+    return (np.issubdtype(dtype,np.integer) or
+            np.issubdtype(dtype,np.floating) or
+            np.issubdtype(dtype,np.bool_))
+
+
+def _as_attribute_array(attr,name):
+    attr=np.asarray(attr)
+    if attr.size==0 and attr.ndim<2:
+        attr=attr.reshape(0,0)
+    if attr.ndim!=2:
+        raise ValueError(f'{name} must be a 2-D array of node attributes')
+    if not _is_numeric_dtype(attr.dtype):
+        raise ValueError(f'{name} must contain numeric node attributes')
+    return attr
+
+
+def _as_adjacency_array(adj,size,name):
+    adj=np.asarray(adj)
+    if adj.shape!=(size,size):
+        raise ValueError(f'{name} must have shape ({size}, {size}), got {adj.shape}')
+    if not _is_numeric_dtype(adj.dtype):
+        raise ValueError(f'{name} must contain numeric entries')
+    return adj
+
+
+def _check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
+    X_attr=_as_attribute_array(X_attr,'X_attr')
+    Y_attr=_as_attribute_array(Y_attr,'Y_attr')
+    X_adj=_as_adjacency_array(X_adj,X_attr.shape[0],'X_adj')
+    Y_adj=_as_adjacency_array(Y_adj,Y_attr.shape[0],'Y_adj')
+    if not c>0:
+        raise ValueError('c must be positive')
+    if not epsilon>0:
+        raise ValueError('epsilon must be positive')
+    if np.ndim(p)!=0:
+        raise ValueError('p must be a scalar')
+    if not (np.isfinite(p) and p>=1):
+        raise ValueError('p must be finite and greater than or equal to 1')
+    return X_attr,Y_attr,X_adj,Y_adj
+
+
+def _empty_result(n_x,n_y,c,p):
+    miss_cost_p=n_x*c**p/2
+    false_cost_p=n_y*c**p/2
+    dxy=(miss_cost_p+false_cost_p)**(1/p)
+    return dxy,0.0,false_cost_p**(1/p),miss_cost_p**(1/p),0.0
+
+
+def _assignment_constraints(n_x,n_y,nParam):
+    WLen=(n_x+1)*(n_y+1)
+    #Constraint 1: sum_i W(i,j)=1 for every real column j
+    Aeq1=sps.hstack((
+        sps.kron(sps.eye(n_y,format='csr'),np.ones((1,n_x+1))),
+        sps.csr_matrix((n_y,n_x+1)),
+        sps.csr_matrix((n_y,nParam-WLen))),format='csr')
+    #Constraint 2: sum_j W(i,j)=1 for every real row i
+    keep_x=sps.hstack((sps.eye(n_x,format='csr'),
+                       sps.csr_matrix((n_x,1))),format='csr')
+    Aeq2=sps.hstack((
+        sps.kron(np.ones((1,n_y+1)),keep_x),
+        sps.csr_matrix((n_x,nParam-WLen))),format='csr')
+    beq=np.ones(n_x+n_y)
+    return sps.vstack((Aeq1,Aeq2),format='csr'),beq
+
+
+def _edge_difference_matrix(n_x,n_y,X_adj,Y_adj):
+    #A_X W - W A_Y for the first n_x rows and n_y columns of W
+    X_pad=sps.hstack((sps.csr_matrix(X_adj),
+                      sps.csr_matrix((n_x,1))),format='csr')
+    keep_x=sps.hstack((sps.eye(n_x,format='csr'),
+                       sps.csr_matrix((n_x,1))),format='csr')
+    MX=sps.kron(sps.eye(n_y,format='csr'),X_pad)
+    MY=sps.kron(sps.csr_matrix(Y_adj.T),keep_x)
+    return MX-MY
+
+
+def _reverse_edge_difference_matrix(n_x,n_y,X_adj,Y_adj):
+    #A_Y W^T - W^T A_X for the first n_x rows and n_y columns of W
+    keep_x=sps.hstack((sps.eye(n_x,format='csr'),
+                       sps.csr_matrix((n_x,1))),format='csr')
+    X_pad_t=sps.hstack((sps.csr_matrix(X_adj.T),
+                        sps.csr_matrix((n_x,1))),format='csr')
+    M1=sps.kron(sps.csr_matrix(Y_adj),keep_x)
+    M2=sps.kron(sps.eye(n_y,format='csr'),X_pad_t)
+    return M1-M2
+
+
+def _solve_lp(f,A,b,Aeq,beq):
+    res=linprog(f,A_ub=A,b_ub=b,A_eq=Aeq,b_eq=beq,method='highs-ipm')
+    if not res.success:
+        raise RuntimeError(f'LP solver failed: {res.message}')
+    return res
+
+
+def _metric_components(dxy,loc_cost,false_cost,miss_cost,edge_cost,p):
+    def clamp(value):
+        return 0.0 if value<=0 else value
+    return (clamp(dxy)**(1/p),clamp(loc_cost)**(1/p),clamp(false_cost)**(1/p),
+            clamp(miss_cost)**(1/p),clamp(edge_cost)**(1/p))
 
 
 def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
@@ -58,150 +156,54 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     Returns: 
     graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
     '''
+    X_attr,Y_attr,X_adj,Y_adj=_check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
     n_x=X_attr.shape[0]
     n_y=Y_attr.shape[0]
+
+    if n_x==0 or n_y==0:
+        return _empty_result(n_x,n_y,c,p)
+
     DAB=locCostComp(X_attr,Y_attr,c,p)
 
     nxny=n_x*n_y
-    nxny2=(n_x+1)*(n_y+1)
-    WLen=nxny2
-    h1Len=nxny
+    WLen=(n_x+1)*(n_y+1)
+    nParam=WLen+1+nxny
 
-    eLen=1
-    nParam=WLen+eLen+h1Len
-    WPos=np.arange(WLen)
-    e1Pos=np.arange(WLen,WLen+1)
-    h1Pos=np.arange(WLen+eLen,WLen+eLen+h1Len)
-    # print(nParam)
-    
     ############# Objective function ################
-    f=np.zeros([nParam,1])
-    f[WPos]=np.reshape(DAB,(WLen,1),order='F')
-    f[e1Pos]=epsilon**p/2
+    f=np.zeros(nParam)
+    f[:WLen]=DAB.reshape(WLen,order='F')
+    f[WLen]=epsilon**p/2
 
-    ###########Equality constraint############
-    #Constraint 1
-    index_x=np.tile(np.arange(n_y),(n_x+1,1))
-    index_x=index_x.flatten(order='F')
-    # index_y=np.zeros([n_y*(n_x+1),1])
-    index_y=np.arange(n_y*(n_x+1))
-    index_y=index_y.flatten(order='F')
-    
+    ###########Equality constraints############
+    Aeq,beq=_assignment_constraints(n_x,n_y,nParam)
 
-    Aeq1=sps.coo_matrix((np.ones(len(index_x)),(index_x,index_y)),shape=(n_y,nParam))
-    beq1=np.ones([n_y,1])
+    ###########Inequality constraints############
+    #Constraint 1: e1 >= sum(h1)
+    A1=sps.hstack((
+        sps.csr_matrix((1,WLen)),
+        sps.csr_matrix(np.array([[-1.0]])),
+        np.ones((1,nxny))),format='csr')
 
+    #Constraints 2 and 3: h1 >= +/- (A_X W - W A_Y)
+    G=sps.hstack((_edge_difference_matrix(n_x,n_y,X_adj,Y_adj),
+                  sps.csr_matrix((nxny,n_x+1))),format='csr')
+    neg_I=-sps.eye(nxny,format='csr')
+    A2=sps.hstack((G,sps.csr_matrix((nxny,1)),neg_I),format='csr')
+    A3=sps.hstack((-G,sps.csr_matrix((nxny,1)),neg_I),format='csr')
 
-    #Constraint 2
-    index_x=np.tile(np.arange(n_x),(n_y+1,1)).T
-    index_x=index_x.flatten(order='F')
+    A=sps.vstack((A1,A2,A3),format='csr')
+    b=np.zeros(A.shape[0])
 
-    index_y=np.tile(np.arange(1,(n_x+1)/n_x*len(index_x),step=n_x+1),(n_x,1))-1
-    index_y2=np.tile(np.arange(n_x),(np.size(index_y,1),1)).T
-    index_y=index_y+index_y2
-    index_y=index_y.flatten(order='F')
-    Aeq2=sps.coo_matrix((np.ones(len(index_x)),(index_x,index_y)),shape=(n_x, nParam))
-    beq2=np.ones([n_x,1])
-    Aeq=sps.vstack((Aeq1,Aeq2))
-    beq=np.vstack((beq1,beq2))
-
-    #inequality constraint
-    #Constraint 1
-    index_minus_x=0
-    index_minus_y=WLen+index_minus_x
-    value_minus=-1
-    index_one_x=np.hstack((index_minus_x,np.zeros(nxny)))
-    index_one_y=WLen+eLen+np.arange(nxny)
-    index_one_y=np.hstack((index_minus_y,index_one_y))
-    value_one=np.hstack((value_minus,np.ones(nxny)))
-    A1=sps.coo_matrix((value_one,(index_one_x,index_one_y)),shape=(1,nParam))
-
-    #Constraint 2
-    index_1_x=np.tile(np.arange(nxny),(n_x,1))
-
-    index_1_x=index_1_x.flatten(order='F')
-    index_1_y=np.tile(np.arange(1,(n_x+1)/n_x*nxny,step=n_x+1),(n_x,1))-1 # todo
-    index_1_y2=np.tile(np.arange(n_x),(np.size(index_1_y,1),1)).T
-    index_1_y=index_1_y+index_1_y2
-    index_1_y=np.tile(index_1_y,(1,n_x))
-    index_1_y=np.reshape(index_1_y,(nxny*n_x),order='F')
-    mask=sps.coo_matrix((np.ones(len(index_1_x)),(index_1_x,index_1_y)),shape=(nxny,(n_x+1)*n_y))
-
-    A_adj1=np.tile(np.hstack((X_adj,np.zeros([n_x,1]))),(1,n_y))
-    ind=np.tile(np.arange(n_x),(n_y,1))
-    ind=ind.flatten(order='F')
-
-    new_adj=np.zeros([nxny,(n_x+1)*n_y])
-
-    for i in range(nxny):
-        new_adj[i,:]=A_adj1[ind[i],:]
-
-
-    new_adj=sps.coo_matrix(new_adj)
-
-    A_adj_1=sps.hstack((new_adj.multiply(mask),np.zeros([nxny,n_x+1])))
-
-
-    index_2_x=np.tile(np.arange(nxny),(n_y,1))
-    index_2_x=index_2_x.flatten(order='F')
-    index_2_y=np.tile(np.arange(1,(n_x+1)/n_x*nxny,step=n_x+1),(n_x,1))-1
-    index_2_y2=np.tile(np.arange(n_x),(np.size(index_2_y,1),1)).T
-    index_2_y=index_2_y+index_2_y2
-    index_2_y=np.tile(index_2_y,(1,n_y)).T
-    index_2_y=index_2_y.flatten(order='F')
-    mask=sps.coo_matrix((np.ones(len(index_2_x)),(index_2_x,index_2_y)),shape=(nxny,(n_x+1)*n_y))
-
-    A_adj2=np.tile(Y_adj.T,(n_x,1))
-    ind=np.tile(np.arange(n_y),(n_x+1,1))
-    ind=ind.flatten(order='F')
-    new_adj=np.zeros([nxny,(n_x+1)*n_y])
-
-    for i in range((n_x+1)*n_y):
-        new_adj[:,i]=A_adj2[:,ind[i]]
-
-    new_adj=sps.coo_matrix(new_adj)
-    A_adj_2=sps.hstack((new_adj.multiply(mask),np.zeros([nxny,n_x+1])))
-
-    A2_adj=sps.hstack(
-                        (A_adj_1-A_adj_2,np.zeros([nxny,eLen]),
-                        -1*(np.zeros([nxny,h1Len])+
-                        np.eye(h1Len))
-                        )
-                    )
-
-    A3_adj=sps.hstack(
-                        (A_adj_2-A_adj_1,np.zeros([nxny,eLen]),
-                        -1*(np.zeros([nxny,h1Len])+np.eye(h1Len))
-                        )
-                    )
-
-
-    A=sps.vstack((A1,A2_adj,A3_adj))
-    lenb,_=A.shape
-    b=np.zeros([lenb,1])
-
-    # lb=np.zeros([nParam,1])
-    # ub=np.full([nParam,1],None)
     #Solve the LP
-    res=linprog(f,A_ub=A,b_ub=b,A_eq=Aeq,b_eq=beq,method='highs-ipm')
+    res=_solve_lp(f,A,b,Aeq,beq)
 
-    W=res.x
-    Wx=np.reshape(W[0:nxny2],(n_x+1,n_y+1),order='F')
-    loc_cost=np.sum(np.multiply(DAB[0:n_x,0:n_y],Wx[0:n_x,0:n_y]))
-    false_cost=np.sum(np.multiply(DAB[n_x,0:n_y],Wx[n_x,0:n_y]))
-    miss_cost=np.sum(np.multiply(DAB[0:n_x,n_y],Wx[0:n_x,n_y]))
-    edge_cost=epsilon**p/2 * W[e1Pos].item()
-    
+    Wx=res.x[:WLen].reshape((n_x+1,n_y+1),order='F')
+    loc_cost=np.sum(DAB[:n_x,:n_y]*Wx[:n_x,:n_y])
+    false_cost=np.sum(DAB[n_x,:n_y]*Wx[n_x,:n_y])
+    miss_cost=np.sum(DAB[:n_x,n_y]*Wx[:n_x,n_y])
+    edge_cost=epsilon**p/2*res.x[WLen]
 
-    # For numerical stability
-    dxy=np.max(res.fun,0)
-    loc_cost=np.max(loc_cost,0)
-    false_cost=np.max(false_cost,0)
-    miss_cost=np.max(miss_cost,0)
-    edge_cost=np.max(edge_cost,0)
-    
-    return dxy**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
-
+    return _metric_components(res.fun,loc_cost,false_cost,miss_cost,edge_cost,p)
 
 
 def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
@@ -220,220 +222,66 @@ def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     Returns: 
     graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
     '''
-    
+    X_attr,Y_attr,X_adj,Y_adj=_check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
     n_x=X_attr.shape[0]
     n_y=Y_attr.shape[0]
+
+    if n_x==0 or n_y==0:
+        return _empty_result(n_x,n_y,c,p)
+
     DAB=locCostComp(X_attr,Y_attr,c,p)
 
     nxny=n_x*n_y
-    nxny2=(n_x+1)*(n_y+1)
-    WLen=nxny2
-    h1Len=nxny
-    h2Len=nxny
-    eLen=2
-    nParam=WLen+eLen+h1Len+h2Len
-    WPos=np.arange(WLen)
-    e1Pos=np.arange(WLen,WLen+1)
-    e2Pos=np.arange(WLen+1,WLen+2)
-    h1Pos=np.arange(WLen+eLen,WLen+eLen+h1Len) 
-    h2Pos=np.arange(WLen+eLen+h1Len,WLen+eLen+h1Len+h2Len)
-    
+    WLen=(n_x+1)*(n_y+1)
+    nParam=WLen+2+2*nxny
+
     ############# Objective function ################
-    f=np.zeros([nParam,1])
-    f[WPos]=np.reshape(DAB,(WLen,1),order='F')
-    f[e1Pos]=epsilon**p/4
-    f[e2Pos]=epsilon**p/4
+    f=np.zeros(nParam)
+    f[:WLen]=DAB.reshape(WLen,order='F')
+    f[WLen]=epsilon**p/4
+    f[WLen+1]=epsilon**p/4
 
-    ###########Equality constraint############
-    #Constraint 1
-    index_x=np.tile(np.arange(n_y),(n_x+1,1))
-    index_x=index_x.flatten(order='F')
-    # index_y=np.zeros([n_y*(n_x+1),1])
-    index_y=np.arange(n_y*(n_x+1))
-    index_y=index_y.flatten(order='F')
-    # index_y[index_rep]=index_rep
+    ###########Equality constraints############
+    Aeq,beq=_assignment_constraints(n_x,n_y,nParam)
 
-    Aeq1=sps.coo_matrix((np.ones(len(index_x)),(index_x,index_y)),shape=(n_y,nParam))
-    beq1=np.ones([n_y,1])
+    ###########Inequality constraints############
+    #Constraint 1: e1 >= sum(h1) and e2 >= sum(h2)
+    minus_one=sps.csr_matrix(np.array([[-1.0]]))
+    A1_1=sps.hstack((
+        sps.csr_matrix((1,WLen)),minus_one,sps.csr_matrix((1,1)),
+        np.ones((1,nxny)),sps.csr_matrix((1,nxny))),format='csr')
+    A1_2=sps.hstack((
+        sps.csr_matrix((1,WLen)),sps.csr_matrix((1,1)),minus_one,
+        sps.csr_matrix((1,nxny)),np.ones((1,nxny))),format='csr')
+    A1=sps.vstack((A1_1,A1_2),format='csr')
 
+    #Constraints 2 and 3: h1 >= +/- (A_X W - W A_Y)
+    G1=sps.hstack((_edge_difference_matrix(n_x,n_y,X_adj,Y_adj),
+                   sps.csr_matrix((nxny,n_x+1))),format='csr')
+    #Constraints 4 and 5: h2 >= +/- (A_Y W^T - W^T A_X)
+    G2=sps.hstack((_reverse_edge_difference_matrix(n_x,n_y,X_adj,Y_adj),
+                   sps.csr_matrix((nxny,n_x+1))),format='csr')
 
-    #Constraint 2
-    index_x=np.tile(np.arange(n_x),(n_y+1,1)).T
-    index_x=index_x.flatten(order='F')
+    zeros_e=sps.csr_matrix((nxny,2))
+    neg_I_h1=sps.hstack((-sps.eye(nxny,format='csr'),
+                         sps.csr_matrix((nxny,nxny))),format='csr')
+    neg_I_h2=sps.hstack((sps.csr_matrix((nxny,nxny)),
+                         -sps.eye(nxny,format='csr')),format='csr')
+    A2=sps.hstack((G1,zeros_e,neg_I_h1),format='csr')
+    A3=sps.hstack((-G1,zeros_e,neg_I_h1),format='csr')
+    A4=sps.hstack((G2,zeros_e,neg_I_h2),format='csr')
+    A5=sps.hstack((-G2,zeros_e,neg_I_h2),format='csr')
 
-    index_y=np.tile(np.arange(1,(n_x+1)/n_x*len(index_x),step=n_x+1),(n_x,1))-1
-    index_y2=np.tile(np.arange(n_x),(np.size(index_y,1),1)).T
-    index_y=index_y+index_y2
-    index_y=index_y.flatten(order='F')
-    Aeq2=sps.coo_matrix((np.ones(len(index_x)),(index_x,index_y)),shape=(n_x, nParam))
-    beq2=np.ones([n_x,1])
-    Aeq=sps.vstack((Aeq1,Aeq2))
-    beq=np.vstack((beq1,beq2))
+    A=sps.vstack((A1,A2,A3,A4,A5),format='csr')
+    b=np.zeros(A.shape[0])
 
-    #inequality constraint
-    #Constraint 1
-    index_minus_x=0
-    index_minus_y=WLen+index_minus_x
-    value_minus=-1
-    index_one_x=np.hstack((index_minus_x,np.zeros(nxny+nxny)))
-    index_one_y=WLen+eLen+np.arange(nxny+nxny)
-    index_one_y=np.hstack((index_minus_y,index_one_y))
-    value_one=np.hstack((value_minus,np.ones(nxny),np.zeros(nxny)))
-    Ae1=sps.coo_matrix((value_one,(index_one_x,index_one_y)),shape=(1,nParam))
-
-
-    index_minus_x=0
-    index_minus_y=WLen+index_minus_x+1
-    value_minus=-1
-    index_one_x=np.hstack((index_minus_x,np.zeros(nxny)))
-    index_one_y=WLen+eLen+nxny+np.arange(nxny)
-    index_one_y=np.hstack((index_minus_y,index_one_y))
-    value_one=np.hstack((value_minus,np.ones(nxny)))
-    Ae2=sps.coo_matrix((value_one,(index_one_x,index_one_y)),shape=(1,nParam))
-
-    A1=sps.vstack((Ae1,Ae2))
-    
-    #Constraint 2
-    index_1_x=np.tile(np.arange(nxny),(n_x,1))
-
-    index_1_x=index_1_x.flatten(order='F')
-    index_1_y=np.tile(np.arange(1,(n_x+1)/n_x*nxny,step=n_x+1),(n_x,1))-1 # todo
-    index_1_y2=np.tile(np.arange(n_x),(np.size(index_1_y,1),1)).T
-    index_1_y=index_1_y+index_1_y2
-    index_1_y=np.tile(index_1_y,(1,n_x))
-    index_1_y=np.reshape(index_1_y,(nxny*n_x),order='F')
-    mask=sps.coo_matrix((np.ones(len(index_1_x)),(index_1_x,index_1_y)),shape=(nxny,(n_x+1)*n_y))
-
-    A_adj1=np.tile(np.hstack((X_adj,np.zeros([n_x,1]))),(1,n_y))
-    ind=np.tile(np.arange(n_x),(n_y,1))
-    ind=ind.flatten(order='F')
-
-    new_adj=np.zeros([nxny,(n_x+1)*n_y])
-
-    for i in range(nxny):
-        new_adj[i,:]=A_adj1[ind[i],:]
-
-
-    new_adj=sps.coo_matrix(new_adj)
-
-    A_adj_1=sps.hstack((new_adj.multiply(mask),np.zeros([nxny,n_x+1])))
-
-
-    index_2_x=np.tile(np.arange(nxny),(n_y,1))
-    index_2_x=index_2_x.flatten(order='F')
-    index_2_y=np.tile(np.arange(1,(n_x+1)/n_x*nxny,step=n_x+1),(n_x,1))-1
-    index_2_y2=np.tile(np.arange(n_x),(np.size(index_2_y,1),1)).T
-    index_2_y=index_2_y+index_2_y2
-    index_2_y=np.tile(index_2_y,(1,n_y)).T
-    index_2_y=index_2_y.flatten(order='F')
-    mask=sps.coo_matrix((np.ones(len(index_2_x)),(index_2_x,index_2_y)),shape=(nxny,(n_x+1)*n_y))
-
-    A_adj2=np.tile(Y_adj.T,(n_x,1))
-    ind=np.tile(np.arange(n_y),(n_x+1,1))
-    ind=ind.flatten(order='F')
-    new_adj=np.zeros([nxny,(n_x+1)*n_y])
-
-    for i in range((n_x+1)*n_y):
-        new_adj[:,i]=A_adj2[:,ind[i]]
-
-    new_adj=sps.coo_matrix(new_adj)
-    A_adj_2=sps.hstack((new_adj.multiply(mask),np.zeros([nxny,n_x+1])))
-
-    A2_adj=sps.hstack(
-                        (A_adj_1-A_adj_2,np.zeros([nxny,eLen]),
-                        -1*(np.zeros([nxny,h1Len+h2Len])+
-                        np.hstack((np.eye(h1Len),np.zeros([h2Len,h2Len]))))
-                        )
-                    )
-
-    A3_adj=sps.hstack(
-                        (A_adj_2-A_adj_1,np.zeros([nxny,eLen]),
-                        -1*(np.zeros([nxny,h1Len+h2Len])+
-                        np.hstack((np.eye(h1Len),np.zeros([h2Len,h2Len]))))
-                        )
-                    )
-
-
-    #Contraint 3
-
-    index_1_x=np.tile(np.arange(nxny),(n_y,1))
-    index_1_x=index_1_x.flatten(order='F')
-
-    index_1_y=np.tile(np.arange(1,(n_x+1)/n_x*nxny,step=n_x+1),(n_x,1))-1
-    index_1_y2=np.tile(np.arange(n_x),(np.size(index_1_y,1),1)).T
-    index_1_y=index_1_y+index_1_y2
-    index_1_y=np.tile(index_1_y.T,(1,n_y))
-    index_1_y=index_1_y.flatten(order='F')
-    mask=sps.coo_matrix((np.ones(len(index_1_x)),(index_1_x,index_1_y)),shape=(nxny,(n_x+1)*n_y))
-
-    A_adj3=np.repeat(np.repeat(Y_adj,n_x,axis=1),n_x,axis=0)
-    ind=np.tile(np.arange(1,(n_x+1)/n_x*nxny,step=n_x+1),(n_x,1))-1
-    ind2=np.tile(np.arange(n_x),(np.size(ind,1),1)).T
-    ind=ind+ind2
-    ind=ind.flatten(order='F')
-    ind=ind.astype(int)
-
-    new_adj=np.zeros([nxny,(n_x+1)*n_y])
-
-    for i in range(nxny):
-        new_adj[:,ind[i]]=A_adj3[:,i]
-
-    new_adj=sps.coo_matrix(new_adj)
-    A_adj_3=sps.hstack((new_adj.multiply(mask),np.zeros([nxny,n_x+1])))
-
-
-
-    index_2_x=np.tile(np.arange(nxny),(n_x,1))
-    index_2_x=index_2_x.flatten(order='F')
-    index_2_y=np.tile(np.arange((n_x+1)*n_y,step=n_x+1),(n_x,1))
-    index_2_y2=np.tile(np.arange(n_x),(n_y,1)).T
-    index_2_y=index_2_y+index_2_y2
-    index_2_y=np.tile(index_2_y.T,(1,n_x)).T
-    index_2_y=index_2_y.flatten(order='F')
-
-    mask=sps.coo_matrix((np.ones(len(index_2_x)),(index_2_x,index_2_y)),shape=(nxny,(n_x+1)*n_y))
-    A_adj4=np.tile(np.hstack((X_adj.T,np.zeros([n_x,1]))),(n_y,n_y))
-
-    new_adj=sps.coo_matrix(A_adj4)
-
-    A_adj_4=sps.hstack((new_adj.multiply(mask),np.zeros([nxny,n_x+1])))
-
-
-    A4_adj=sps.hstack(
-                        (A_adj_3-A_adj_4,np.zeros([nxny,eLen]),
-                        -1*(np.zeros([nxny,h1Len+h2Len])+np.hstack((np.zeros([h1Len,h1Len]),np.eye(h2Len))))
-                        )
-                    )
-
-    A5_adj=sps.hstack(
-                        (A_adj_4-A_adj_3,np.zeros([nxny,eLen]),
-                        -1*(np.zeros([nxny,h1Len+h2Len])+np.hstack((np.zeros([h1Len,h1Len]),np.eye(h2Len))))
-                        )
-                    )
-
-
-
-    A=sps.vstack((A1,A2_adj,A3_adj,A4_adj,A5_adj))
-    lenb,_=A.shape
-    b=np.zeros([lenb,1])
-    
-    # lb=np.zeros([nParam,1])
-    # ub=np.full([nParam,1],None)
     #Solve the LP
-    res=linprog(f,A_ub=A,b_ub=b,A_eq=Aeq,b_eq=beq,method='highs-ipm')
+    res=_solve_lp(f,A,b,Aeq,beq)
 
-    W=res.x
-    Wx=np.reshape(W[0:nxny2],(n_x+1,n_y+1),order='F')
-    loc_cost=np.sum(np.multiply(DAB[0:n_x,0:n_y],Wx[0:n_x,0:n_y]))
-    false_cost=np.sum(np.multiply(DAB[n_x,0:n_y],Wx[n_x,0:n_y]))
-    miss_cost=np.sum(np.multiply(DAB[0:n_x,n_y],Wx[0:n_x,n_y]))
-    edge_cost=epsilon**p/4 * (W[e1Pos].item()+W[e2Pos].item())
-    
-    # For numerical stability
-    dxy=np.max(res.fun,0)
-    loc_cost=np.max(loc_cost,0)
-    false_cost=np.max(false_cost,0)
-    miss_cost=np.max(miss_cost,0)
-    edge_cost=np.max(edge_cost,0)
-    
-    return dxy**(1/p),loc_cost**(1/p),false_cost**(1/p),miss_cost**(1/p),edge_cost**(1/p)
+    Wx=res.x[:WLen].reshape((n_x+1,n_y+1),order='F')
+    loc_cost=np.sum(DAB[:n_x,:n_y]*Wx[:n_x,:n_y])
+    false_cost=np.sum(DAB[n_x,:n_y]*Wx[n_x,:n_y])
+    miss_cost=np.sum(DAB[:n_x,n_y]*Wx[:n_x,n_y])
+    edge_cost=epsilon**p/4*(res.x[WLen]+res.x[WLen+1])
+
+    return _metric_components(res.fun,loc_cost,false_cost,miss_cost,edge_cost,p)

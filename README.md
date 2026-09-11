@@ -14,7 +14,7 @@ The graph GOSPA metric is an extension of the GOSPA metric for sets of objects p
 Below are usage examples of the graph GOSPA metric.
 ### Python:
 ```python
-import numpy
+import numpy as np
 from graphGOSPA import LP_graph_GOSPA,LP_graph_GOSPA_directed
 
 # define graph X and Y 
