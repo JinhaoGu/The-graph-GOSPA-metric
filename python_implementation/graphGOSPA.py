@@ -85,7 +85,7 @@ def _empty_result(n_x,n_y,c,p):
     miss_cost_p=n_x*c**p/2
     false_cost_p=n_y*c**p/2
     dxy=(miss_cost_p+false_cost_p)**(1/p)
-    return dxy,0.0,false_cost_p**(1/p),miss_cost_p**(1/p),0.0
+    return dxy,0.0,false_cost_p,miss_cost_p,0.0
 
 
 def _assignment_constraints(n_x,n_y,nParam):
@@ -137,8 +137,8 @@ def _solve_lp(f,A,b,Aeq,beq):
 def _metric_components(dxy,loc_cost,false_cost,miss_cost,edge_cost,p):
     def clamp(value):
         return 0.0 if value<=0 else value
-    return (clamp(dxy)**(1/p),clamp(loc_cost)**(1/p),clamp(false_cost)**(1/p),
-            clamp(miss_cost)**(1/p),clamp(edge_cost)**(1/p))
+    return (clamp(dxy)**(1/p),clamp(loc_cost),clamp(false_cost),
+            clamp(miss_cost),clamp(edge_cost))
 
 
 def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
@@ -154,7 +154,8 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     epsilon: penalty for edge mismatch
     
     Returns: 
-    graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
+    graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost.
+    The four component costs are returned to the p-th power, so dxy^p equals their sum.
     '''
     X_attr,Y_attr,X_adj,Y_adj=_check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
     n_x=X_attr.shape[0]
@@ -220,7 +221,8 @@ def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     epsilon: penalty for edge mismatch
     
     Returns: 
-    graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost
+    graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost.
+    The four component costs are returned to the p-th power, so dxy^p equals their sum.
     '''
     X_attr,Y_attr,X_adj,Y_adj=_check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
     n_x=X_attr.shape[0]
