@@ -33,7 +33,7 @@ def locCostComp(X_attr,Y_attr,c,p):
         y_nan=np.isnan(Y_attr)[None,:,:]
         no_hole=~(x_nan.any(axis=2) | y_nan.any(axis=2))
         one_hole=(x_nan & ~y_nan).any(axis=2) | (~x_nan & y_nan).any(axis=2)
-        dist=np.linalg.norm(X_attr[:,None,:]-Y_attr[None,:,:],axis=2)
+        dist=np.linalg.norm(np.asarray(X_attr,dtype=float)[:,None,:]-np.asarray(Y_attr,dtype=float)[None,:,:],axis=2)
         locCostMat[:n_x,:n_y]=np.where(no_hole,dist**p,np.where(one_hole,tmpCost,0.0))
 
     return locCostMat
