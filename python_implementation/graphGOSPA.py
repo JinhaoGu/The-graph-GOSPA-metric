@@ -58,6 +58,8 @@ def _as_attribute_array(attr,name):
 
 def _as_adjacency_array(adj,size,name):
     adj=np.asarray(adj)
+    if adj.size==0 and adj.ndim<2 and size==0:
+        adj=adj.reshape(0,0)
     if adj.shape!=(size,size):
         raise ValueError(f'{name} must have shape ({size}, {size}), got {adj.shape}')
     if not _is_numeric_dtype(adj.dtype):
