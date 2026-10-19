@@ -67,3 +67,19 @@ epsilon=1; %penalty for edge mismatch
 ```
 
 
+## GPU backend (optional)
+
+`python_implementation/gospa_gpu.py` provides the same functions backed by
+NVIDIA cuOpt, with identical arguments and return values:
+
+```python
+import graphGOSPA_gpu as M
+
+dxy,loc_cost,false_cost,miss_cost,edge_cost=\
+    M.LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
+```
+
+Install with
+`pip install --extra-index-url https://pypi.nvidia.com cuopt-cu13`
+(Linux and an NVIDIA GPU are required). Timings and memory use by graph size
+are in [GPU_BENCHMARKS.md](python_implementation/GPU_BENCHMARKS.md).
