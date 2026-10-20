@@ -1,5 +1,8 @@
 # GPU backend: time and memory by graph size
 
+The figures are drawn by `benchmarks/plot_benchmarks.py` from the measured
+results in `benchmarks/results/*.json`.
+
 All numbers in this file come from the GPU backend (`gospa_gpu.py`). Each row
 is a single call to `LP_graph_GOSPA` or `LP_graph_GOSPA_directed` with the
 default settings: PDLP; `presolve="auto"`, which turns presolve off at these
@@ -74,7 +77,13 @@ entries than real nonzeros (101 M instead of 2.0 M at n = 100), and a
 directed n = 500 graph crashed SciPy with a segmentation fault. Every `kron`
 call now asks for CSR output.
 
+![Complete graph n = 100 before and after the kron fix: time and stored entries](benchmarks/figures/kron_fix.png)
+
 ## Where the memory and time go
+
+![Total time per graph pair against n for undirected, directed and complete graphs](benchmarks/figures/time_vs_n.png)
+
+![Peak GPU memory and peak host memory against n](benchmarks/figures/memory_vs_n.png)
 
 The number of nonzeros of the constraint matrix determines both time and
 memory. It grows as n^3, and linearly with the edge density rho:
@@ -106,6 +115,8 @@ quarter of the total; the rest is the PDLP solve.
 These values come from the VRAM rules above. The measured range is up to
 n = 1100 (undirected), 800 (directed) and 700 (complete). Values beyond those
 are extrapolations.
+
+![Largest graph that fits for 16 to 80 GB of GPU memory](benchmarks/figures/max_n_per_gpu.png)
 
 | GPU memory | undirected, density 0.5 | directed, density 0.5 | complete |
 |---:|---:|---:|---:|
@@ -146,6 +157,36 @@ those LPs on the CPU.
 CuPy 14.0.1 note: `cupyx.scipy.sparse.csr_matrix.eliminate_zeros()` also
 drops negative entries. The GPU build filters zeros on the COO arrays instead.
 
+![Build time and solve time per undirected graph pair](benchmarks/figures/build_vs_solve.png)
+
+## Many small graphs
+
+For graphs with fewer than about 100 nodes, a single solve does not keep the
+GPU busy, and a fixed cost of about 0.1 to 0.2 s per call dominates. Running
+several pairs at once helps. The GPU functions can be called from a
+`concurrent.futures.ThreadPoolExecutor`, and the CPU functions from a
+`ProcessPoolExecutor`. Measured on the same A100 machine, which has 12 CPU
+cores. Undirected pairs, 32 per size (fewer for the slow CPU runs); every
+method gave the same dxy:
+
+| n | GPU, one at a time | GPU, 8 threads | CPU, one process | CPU, 12 processes | fastest |
+|---:|---:|---:|---:|---:|---|
+| 20 | 126 ms | 67 ms | 34 ms | 12 ms | CPU, 12 processes |
+| 35 | 146 ms | 64 ms (4 threads) | 248 ms | 45 ms | CPU, 12 processes |
+| 50 | 190 ms | 81 ms | 1.4 s | 227 ms | GPU, 8 threads |
+| 70 | 205 ms | 124 ms | | 2.8 s | GPU, 8 threads |
+| 100 | 234 ms | 126 ms | 213 s | 38 s | GPU, 8 threads |
+
+Below about 40 nodes the CPU solver on all cores is fastest. Above that the
+GPU with 4 to 8 threads is fastest, and the CPU falls behind quickly: at
+n = 100 it is 300x slower even on 12 cores. With presolve off, the GPU was
+slower at small sizes (171 ms instead of 126 ms at n = 20, 244 ms instead of
+190 ms at n = 50), so keep `presolve="auto"`. cuOpt's `BatchSolve` is
+deprecated in cuOpt 26.10; it ran concurrent LPs in C++ threads, which the
+thread pool does too.
+
+![Time per pair against n for GPU and CPU, sequential and parallel](benchmarks/figures/small_graphs.png)
+
 ## Solver choice
 
 `method="pdlp"` (the default) runs only cuOpt's GPU PDLP solver. cuOpt's
@@ -155,6 +196,8 @@ simplex alone did not finish in 900 s at n = 300, and barrier asked for
 66.7 GB of GPU memory at n = 300 and failed. At n = 300 the solve took
 6.4 s in concurrent mode and 1.9 s with PDLP only. From n = 700 upwards the
 two modes take the same time.
+
+![Solve time in concurrent mode and with PDLP only at n = 300 and 700](benchmarks/figures/solver_mode.png)
 
 ## Comparison with the previous LP formulation
 
@@ -170,6 +213,8 @@ GPU with the same graphs:
 
 The largest undirected graph that fits in 80 GB went from about 845 to about
 1120 nodes.
+
+![Total time, host RAM and GPU memory after each pull request at n = 500, 700 and 1100](benchmarks/figures/changes_by_pr.png)
 
 The original measurements of the previous formulation are kept below for
 reference. They used 2-D node attributes, adjacency density 0.5, c=3, p=1,
