@@ -2,39 +2,41 @@
 
 All numbers in this file come from the GPU backend (`gospa_gpu.py`). Each row
 is a single call to `LP_graph_GOSPA` or `LP_graph_GOSPA_directed` with the
-default settings: PDLP, and `presolve="auto"`, which turns presolve off at
-these sizes.
+default settings: PDLP; `presolve="auto"`, which turns presolve off at these
+sizes; and `build="auto"`, which assembles the LP with CuPy on the GPU for
+LPs with at least 10 M stored entries and with SciPy on the CPU below that.
 
 ## Setup
 
 | | |
 |---|---|
 | GPU | NVIDIA A100-SXM4-80GB (Google Colab), driver 580.82.07 |
-| Software | cuOpt 26.10.00, SciPy 1.16.3, NumPy 2.1.3, Python 3.13 |
+| Software | cuOpt 26.10.00, CuPy 14.0.1, SciPy 1.16.3, NumPy 2.1.3, Python 3.13 |
 | Parameters | c = 3, p = 1, epsilon = 1, 2-D node attributes |
 | Graphs | X is random with edge density 0.5. Y is a noisy copy of X: 5% of the nodes are dropped, positions get Gaussian noise (sigma 0.3) and 5% of the edges are flipped. |
 
 Columns:
 
-- **build**: assembling the LP with SciPy on the CPU (`graphGOSPA._build_lp`).
-- **solve**: the call to `gospa_gpu.solve_lp`. This includes building the cuOpt model.
+- **build**: assembling the LP. The label says where: GPU (`gospa_gpu._build_lp_gpu`)
+  or CPU (`graphGOSPA._build_lp`).
+- **solve**: building the cuOpt model and solving it.
 - **RAM** and **VRAM**: peak process RSS and peak GPU memory during the call.
 
 ## Undirected graphs
 
 | n | variables | nonzeros | build | solve | total | RAM | VRAM |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 100 | 28,395 | 0.9 M | 0.04 s | 0.54 s | 0.6 s | 0.9 GB | 0.5 GB |
-| 200 | 113,189 | 7.4 M | 0.29 s | 1.14 s | 1.4 s | 1.1 GB | 0.9 GB |
-| 300 | 258,888 | 25.5 M | 1.13 s | 2.00 s | 3.1 s | 1.5 GB | 2.1 GB |
-| 400 | 466,389 | 61.5 M | 2.70 s | 3.78 s | 6.5 s | 2.7 GB | 4.3 GB |
-| 500 | 711,975 | 116.2 M | 5.09 s | 4.96 s | 10.1 s | 4.7 GB | 7.7 GB |
-| 600 | 1,012,763 | 196.0 M | 8.53 s | 11.13 s | 19.7 s | 7.5 GB | 12.6 GB |
-| 700 | 1,399,967 | 320.2 M | 14.18 s | 18.08 s | 32.3 s | 11.8 GB | 20.1 GB |
-| 800 | 1,808,754 | 469.7 M | 20.40 s | 20.18 s | 40.6 s | 17.1 GB | 29.3 GB |
-| 900 | 2,331,864 | 686.1 M | 29.50 s | 32.99 s | 62.5 s | 24.7 GB | 42.4 GB |
-| 1000 | 2,842,948 | 925.6 M | 40.21 s | 45.65 s | 85.9 s | 33.1 GB | 57.0 GB |
-| 1100 | 3,420,937 | 1220.4 M | 53.04 s | 65.78 s | 118.9 s | 43.5 GB | 74.9 GB |
+| 100 | 28,395 | 0.9 M | 0.04 s (CPU) | 0.57 s | 0.6 s | 0.9 GB | 0.5 GB |
+| 200 | 113,189 | 7.4 M | 0.29 s (CPU) | 1.16 s | 1.4 s | 1.0 GB | 0.9 GB |
+| 300 | 258,888 | 25.5 M | 0.82 s (GPU) | 1.76 s | 2.6 s | 1.4 GB | 2.2 GB |
+| 400 | 466,389 | 61.5 M | 1.41 s (GPU) | 3.52 s | 4.9 s | 2.3 GB | 4.6 GB |
+| 500 | 711,975 | 116.2 M | 2.29 s (GPU) | 4.72 s | 7.0 s | 3.6 GB | 8.3 GB |
+| 600 | 1,012,763 | 196.0 M | 3.63 s (GPU) | 10.98 s | 14.6 s | 5.5 GB | 13.3 GB |
+| 700 | 1,399,967 | 320.2 M | 5.64 s (GPU) | 17.88 s | 23.6 s | 8.4 GB | 20.2 GB |
+| 800 | 1,808,754 | 469.7 M | 8.07 s (GPU) | 20.04 s | 28.1 s | 11.9 GB | 29.3 GB |
+| 900 | 2,331,864 | 686.1 M | 11.46 s (GPU) | 32.87 s | 44.4 s | 17.0 GB | 42.4 GB |
+| 1000 | 2,842,948 | 925.6 M | 15.42 s (GPU) | 44.82 s | 60.3 s | 22.7 GB | 57.0 GB |
+| 1100 | 3,420,937 | 1220.4 M | 19.99 s (GPU) | 66.46 s | 86.5 s | 29.6 GB | 74.9 GB |
 
 ## Directed graphs
 
@@ -43,14 +45,14 @@ therefore has about twice the nonzeros of an undirected graph of the same size.
 
 | n | variables | nonzeros | build | solve | total | RAM | VRAM |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 100 | 47,195 | 1.9 M | 0.09 s | 0.57 s | 0.7 s | 0.9 GB | 0.6 GB |
-| 200 | 188,389 | 14.7 M | 0.66 s | 1.34 s | 2.0 s | 1.2 GB | 1.4 GB |
-| 300 | 431,088 | 50.8 M | 2.44 s | 2.85 s | 5.3 s | 2.4 GB | 3.7 GB |
-| 400 | 776,789 | 122.9 M | 5.78 s | 6.33 s | 12.1 s | 4.9 GB | 8.1 GB |
-| 500 | 1,185,975 | 232.5 M | 10.99 s | 10.56 s | 21.6 s | 8.8 GB | 14.8 GB |
-| 600 | 1,687,163 | 392.5 M | 18.54 s | 18.34 s | 36.9 s | 14.4 GB | 24.6 GB |
-| 700 | 2,332,367 | 638.5 M | 30.31 s | 39.40 s | 69.7 s | 23.1 GB | 39.6 GB |
-| 800 | 3,013,554 | 939.8 M | 44.79 s | 51.79 s | 96.6 s | 33.7 GB | 57.9 GB |
+| 100 | 47,195 | 1.9 M | 0.09 s (CPU) | 0.62 s | 0.7 s | 0.9 GB | 0.6 GB |
+| 200 | 188,389 | 14.7 M | 0.64 s (GPU) | 1.09 s | 1.7 s | 1.2 GB | 1.4 GB |
+| 300 | 431,088 | 50.8 M | 1.24 s (GPU) | 2.62 s | 3.9 s | 2.0 GB | 3.7 GB |
+| 400 | 776,789 | 122.9 M | 2.38 s (GPU) | 6.11 s | 8.5 s | 3.7 GB | 8.1 GB |
+| 500 | 1,185,975 | 232.5 M | 4.19 s (GPU) | 10.33 s | 14.5 s | 6.3 GB | 14.8 GB |
+| 600 | 1,687,163 | 392.5 M | 6.92 s (GPU) | 18.15 s | 25.1 s | 10.1 GB | 24.6 GB |
+| 700 | 2,332,367 | 638.5 M | 10.85 s (GPU) | 39.26 s | 50.2 s | 15.9 GB | 39.6 GB |
+| 800 | 3,013,554 | 939.8 M | 15.67 s (GPU) | 51.38 s | 67.1 s | 23.0 GB | 57.9 GB |
 
 ## Complete graphs
 
@@ -59,10 +61,10 @@ Undirected, edge density 1. Y is X with jittered positions and the same edges.
 | n | total | RAM | VRAM |
 |---:|---:|---:|---:|
 | 100 | 1.0 s | 0.9 GB | 0.6 GB |
-| 200 | 4.0 s | 1.3 GB | 1.5 GB |
-| 300 | 8.3 s | 2.5 GB | 3.9 GB |
-| 500 | 50.7 s | 9.4 GB | 15.8 GB |
-| 700 | 156.4 s | 24.7 GB | 42.2 GB |
+| 200 | 3.7 s | 1.2 GB | 1.6 GB |
+| 300 | 7.0 s | 2.1 GB | 4.1 GB |
+| 500 | 43.8 s | 6.7 GB | 15.8 GB |
+| 700 | 136.6 s | 17.0 GB | 42.2 GB |
 
 Before the `kron` fix, the n = 100 case did not finish in 600 s. This was
 true for the `main` branch and for the L1 formulation without the fix. When
@@ -82,8 +84,9 @@ nonzeros ~= 1.9 * rho * n^3     undirected
 nonzeros ~= 3.7 * rho * n^3     directed
 ```
 
-For n >= 300 each nonzero needs about **62 bytes of VRAM** and **36 bytes of
-RAM**. RAM peaks while SciPy assembles the LP, before cuOpt is called. VRAM
+For n >= 300 each nonzero needs about **62 bytes of VRAM** and **24 bytes of
+RAM**. RAM peaks when cuOpt's model is created, because for a moment both our
+copy of the matrix and cuOpt's copy exist (12 bytes per nonzero each). VRAM
 peaks during the solve.
 
 Fitted VRAM rules for n >= 300 (GB):
@@ -94,10 +97,9 @@ directed,   density 0.5:  VRAM ~= 0.8 + 1.12e-7 * n^3
 complete (undirected):    VRAM ~= 0.6 + 1.21e-7 * n^3
 ```
 
-The total time also grows roughly as n^3: about 90 ns * n^3 for undirected
-graphs at density 0.5. The CPU build takes about as long as the GPU solve.
-During the build the GPU is idle, so moving the assembly to the GPU is the
-next obvious speed-up.
+The total time also grows roughly as n^3: about 65 ns * n^3 for undirected
+graphs at density 0.5. With the GPU build, assembling the LP takes about a
+quarter of the total; the rest is the PDLP solve.
 
 ## Largest n that fits in GPU memory
 
@@ -113,8 +115,36 @@ are extrapolations.
 | 48 GB | 945 | 750 | 730 |
 | 80 GB | 1120 | 890 | 870 |
 
-Host RAM must also hold the LP while it is built. That is about 0.6x the VRAM
+Host RAM must also hold the LP for a moment. That is about 0.4x the VRAM
 figure.
+
+## LP assembly on the GPU
+
+`build="gpu"` generates the constraint matrix on the GPU with CuPy, in chunks
+of mismatch columns. It converts each chunk to CSR on the GPU and copies it
+into preallocated host arrays. The result is the same matrix as the SciPy
+build, entry for entry. It was checked on 560 random cases: directed and
+undirected; int, bool, weighted, complete and sparse adjacency matrices; with
+and without self-loops; with the default chunk size and with a tiny one
+that forces many chunks. Unlike the SciPy build, there
+are no intermediate copies on the host. The host copy is also released as
+soon as cuOpt has its own copy. Undirected graphs, density 0.5:
+
+| n | build CPU → GPU | total | RAM | VRAM |
+|---:|---:|---:|---:|---:|
+| 500 | 5.09 → 2.29 s | 10.1 → 7.0 s | 4.7 → 3.6 GB | 7.7 → 8.3 GB |
+| 700 | 14.18 → 5.64 s | 32.3 → 23.6 s | 11.8 → 8.4 GB | 20.1 → 20.2 GB |
+| 1000 | 40.21 → 15.42 s | 85.9 → 60.3 s | 33.1 → 22.7 GB | 57.0 → 57.0 GB |
+| 1100 | 53.04 → 19.99 s | 118.9 → 86.6 s | 43.5 → 29.6 GB | 74.9 → 74.9 GB |
+
+On mid-sized graphs the GPU build adds up to about 0.7 GB of VRAM. On large
+graphs the solve sets the VRAM peak, so the peak does not change. For small
+LPs, the first CuPy calls cost more than they save: at n = 100 the GPU build
+takes 0.41 s and the CPU build 0.04 s. For this reason `build="auto"` keeps
+those LPs on the CPU.
+
+CuPy 14.0.1 note: `cupyx.scipy.sparse.csr_matrix.eliminate_zeros()` also
+drops negative entries. The GPU build filters zeros on the COO arrays instead.
 
 ## Solver choice
 
@@ -135,8 +165,8 @@ GPU with the same graphs:
 
 | n | VRAM before → now | RAM before → now | total before → now |
 |---:|---:|---:|---:|
-| 500 | 14.6 → 7.7 GB | 10.7 → 4.7 GB | 18.2 → 10.1 s |
-| 700 | 39.4 → 20.1 GB | 28.3 → 11.8 GB | 50.6 → 32.3 s |
+| 500 | 14.6 → 8.3 GB | 10.7 → 3.6 GB | 18.2 → 7.0 s |
+| 700 | 39.4 → 20.2 GB | 28.3 → 8.4 GB | 50.6 → 23.6 s |
 
 The largest undirected graph that fits in 80 GB went from about 845 to about
 1120 nodes.

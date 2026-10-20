@@ -83,7 +83,7 @@ minutes or does not finish (see [GPU_BENCHMARKS.md](python_implementation/GPU_BE
 ### Requirements and installation
 
 - Linux, and an NVIDIA GPU with a recent driver. Google Colab GPU runtimes work.
-- numpy and scipy, plus cuOpt:
+- numpy and scipy, plus cuOpt (this also installs CuPy, which the GPU LP assembly uses):
 
 ```bash
 pip install --extra-index-url https://pypi.nvidia.com cuopt-cu13
@@ -120,6 +120,7 @@ Optional keyword arguments:
 | `presolve` | `"auto"` | `"auto"` enables presolve up to 10,000 LP variables (about 57 nodes per graph for undirected graphs, 44 for directed ones) and disables it above, where it is slow. Pass `True` or `False` to force it. |
 | `tolerance` | `1e-8` | Relative optimality tolerance. Results match the CPU solver to about 1e-8 relative. |
 | `time_limit` | `1800` | Time limit in seconds. |
+| `build` | `"auto"` | Where the LP is assembled: `"gpu"` (CuPy), `"cpu"` (SciPy) or `"auto"`. `"auto"` uses the GPU from 10 M stored entries on (about 215 nodes per graph at density 0.5) and the CPU below that. Both give the same matrix. The GPU build is about 2.5x faster and needs less host RAM. |
 
 If cuOpt stops before reaching an optimal solution (time limit or numerical
 trouble), a `RuntimeError` is raised. A non-optimal solution is never
@@ -139,9 +140,9 @@ Largest graph that fits, from measurements on an A100 80 GB:
 | 40 GB | ~890 | ~705 | ~685 |
 | 80 GB | ~1120 | ~890 | ~870 |
 
-For example, an undirected graph pair with n = 1000 at density 0.5 takes 86 s
-and 57 GB of GPU memory. The machine also needs host RAM of about 0.6x the GPU
-memory, because the LP is assembled on the CPU.
+For example, an undirected graph pair with n = 1000 at density 0.5 takes 60 s
+and 57 GB of GPU memory. The machine also needs host RAM of about 0.4x the GPU
+memory, because cuOpt keeps a copy of the LP on the host.
 
 Full measurements, time scaling and a comparison with the previous LP
 formulation are in [GPU_BENCHMARKS.md](python_implementation/GPU_BENCHMARKS.md).
