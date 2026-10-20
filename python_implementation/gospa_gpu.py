@@ -91,19 +91,28 @@ def solve_lp(c, A_ub, b_ub, A_eq, b_eq, *, presolve="auto",
     if method not in _METHODS:
         raise ValueError(f"method must be one of {sorted(_METHODS)}")
 
+    # cuOpt wants contiguous float64 vectors.
     c = np.ascontiguousarray(c, dtype=np.float64).ravel()
     n = c.size
+    # The graph GOSPA LP built by graphGOSPA._build_lp has equality
+    # constraints only; an empty inequality block keeps the code below generic.
     if A_ub is None:
         A_ub = sps.csr_matrix((0, n))
         b_ub = np.zeros(0)
     b_ub = np.ascontiguousarray(b_ub, dtype=np.float64).ravel()
     b_eq = np.ascontiguousarray(b_eq, dtype=np.float64).ravel()
 
+    # Presolve gives tighter agreement with the CPU result but is slow on
+    # large models, so "auto" enables it only for small ones.
     if presolve == "auto":
         presolve_on = n <= PRESOLVE_VAR_THRESHOLD
     else:
         presolve_on = bool(presolve)
 
+    # cuOpt uses ranged rows, lower <= G x <= upper, so both blocks go into
+    # one matrix:
+    #   inequality rows: -inf <= A_ub x <= b_ub
+    #   equality rows:   b_eq <= A_eq x <= b_eq
     G = sps.vstack([A_ub, A_eq], format="csr")
     # cuOpt takes int32 CSR indices; casting larger values would wrap silently.
     if G.nnz > _INT32_MAX or n > _INT32_MAX:
@@ -113,23 +122,29 @@ def solve_lp(c, A_ub, b_ub, A_eq, b_eq, *, presolve="auto",
     lower = np.concatenate([np.full(A_ub.shape[0], -np.inf), b_eq])
     upper = np.concatenate([b_ub, b_eq])
 
+    # Build the cuOpt model from the CSR arrays and the bounds.
     dm = DataModel()
     dm.set_csr_constraint_matrix(
         np.ascontiguousarray(G.data, dtype=np.float64),
         np.ascontiguousarray(G.indices, dtype=np.int32),
         np.ascontiguousarray(G.indptr, dtype=np.int32),
     )
+    # The scipy matrix is no longer needed; free it before the solve so that
+    # host memory peaks only once.
     del G
     dm.set_constraint_lower_bounds(lower)
     dm.set_constraint_upper_bounds(upper)
+    # x >= 0, no upper bound (W <= 1 already follows from the row sums).
     dm.set_variable_lower_bounds(np.zeros(n))
     dm.set_variable_upper_bounds(np.full(n, np.inf))
     dm.set_objective_coefficients(c)
     dm.set_maximize(False)
 
     settings = SolverSettings()
+    # Relative optimality tolerance of the solver.
     settings.set_optimality_tolerance(float(tolerance))
     settings.set_parameter("time_limit", int(time_limit))
+    # PDLP only by default; see "Solver" in the module docstring.
     settings.set_parameter("method", int(getattr(SolverMethod, _METHODS[method])))
     if not presolve_on:
         settings.set_parameter("presolve", 0)
@@ -146,6 +161,10 @@ def solve_lp(c, A_ub, b_ub, A_eq, b_eq, *, presolve="auto",
 
 
 def _gpu_solver(presolve, tolerance, time_limit, method):
+    # Adapt solve_lp to the solve(f, Aeq, beq) -> (x, objective) interface
+    # expected by graphGOSPA._graph_GOSPA. Input checks, LP assembly and the
+    # split into cost components are shared with the CPU backend, so the two
+    # backends differ only in the solver.
     def solve(f, Aeq, beq):
         return solve_lp(f, None, None, Aeq, beq, presolve=presolve,
                         tolerance=tolerance, time_limit=time_limit,
