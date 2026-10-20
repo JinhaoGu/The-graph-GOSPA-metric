@@ -1,5 +1,36 @@
 # GPU backend: time and memory by graph size
 
+## Current formulation (L1 slacks, PDLP)
+
+The LP now writes each edge-mismatch block as `G w - s+ + s- = 0`, so the
+edge matrix `G` is stored once instead of twice and the dense `e >= sum(h)`
+row is gone. The constraint matrix has about half the nonzeros, and RAM and
+VRAM drop by about half. The GPU backend also runs PDLP only, instead of
+cuOpt's concurrent mode.
+
+Same A100-SXM4-80GB, cuOpt 26.10.0, `presolve=0`, c=3, p=1, epsilon=1,
+density 0.5. Y is a noisy copy of X: 5% of nodes dropped, 5% of edges flipped.
+These are full `gospa_gpu.LP_graph_GOSPA` calls:
+
+| n | nonzeros | total time | RAM peak | VRAM peak |
+|---:|---:|---:|---:|---:|
+| 300 | 25.5 M | 3.3 s | 1.7 GB | 2.0 GB |
+| 700 | 320 M | 30.8 s | 15.3 GB | 19.7 GB |
+| 1000 | 926 M | 97.8 s | 44.2 GB | 57.4 GB |
+| 1100 | ~1.23 G | ~125 s | - | 74.9 GB |
+
+Directed graphs: n=300 took 5.9 s with 3.5 GB VRAM; n=600 took 38.7 s with 25.4 GB.
+
+Concurrent mode compared with PDLP only, at n=300: 6.4 s vs 1.9 s for the
+solve. Dual simplex did not finish in 900 s, and barrier ran out of memory,
+so PDLP always finished first. At n >= 700 the two modes take the same time.
+
+The largest undirected n that fits on an 80 GB GPU is now about 1100, up
+from about 845.
+
+The rest of this file measures the previous formulation and is kept for
+reference.
+
 Environment: NVIDIA A100-SXM4-80GB, CUDA 13.3, cuOpt 26.10.0, float64,
 `presolve=0`, 2-D node attributes, adjacency density 0.5, c=3, p=1, epsilon=1.
 Times are for one call of `LP_graph_GOSPA`.
