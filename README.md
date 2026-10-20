@@ -38,6 +38,8 @@ dxy,loc_cost,false_cost,miss_cost,edge_cost=LP_graph_GOSPA_directed(X_attr,Y_att
 
 ```
 
+`python_implementation/graphGOSPA_original.py` keeps the original CPU implementation, with the earlier LP formulation, for reference and comparison. It has the same functions and returns the same values. The full repository state before that change is tagged `original-cpu-version`.
+
 ### MATLAB:
 
 ```MATLAB
