@@ -129,11 +129,53 @@ def _reverse_edge_difference_matrix(n_x,n_y,X_adj,Y_adj):
     return M1-M2
 
 
-def _solve_lp(f,A,b,Aeq,beq):
-    res=linprog(f,A_ub=A,b_ub=b,A_eq=Aeq,b_eq=beq,method='highs-ipm')
+def _build_lp(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon,directed):
+    '''
+    Assemble the graph GOSPA LP as min f'x s.t. Aeq x = beq, x >= 0.
+
+    Variables are [W (vectorised, column-major), s_plus, s_minus]. Every edge
+    mismatch block G w is written as G w - s_plus + s_minus = 0 and penalised
+    through the slacks, so G is stored once and there is no dense row.
+    '''
+    n_x=X_attr.shape[0]
+    n_y=Y_attr.shape[0]
+    DAB=locCostComp(X_attr,Y_attr,c,p)
+
+    nxny=n_x*n_y
+    WLen=(n_x+1)*(n_y+1)
+    blocks=[_edge_difference_matrix(n_x,n_y,X_adj,Y_adj)]
+    edge_weight=epsilon**p/2
+    if directed:
+        blocks.append(_reverse_edge_difference_matrix(n_x,n_y,X_adj,Y_adj))
+        edge_weight=epsilon**p/4
+    nSlack=len(blocks)*nxny
+    nParam=WLen+2*nSlack
+
+    ############# Objective function ################
+    f=np.empty(nParam)
+    f[:WLen]=DAB.reshape(WLen,order='F')
+    f[WLen:]=edge_weight
+
+    ###########Equality constraints############
+    #Assignment constraints on W
+    Aeq_W,beq_W=_assignment_constraints(n_x,n_y,nParam)
+
+    #Edge mismatch: G w - s_plus + s_minus = 0
+    I=sps.eye(nSlack,format='csr')
+    G=sps.vstack(blocks,format='csr')
+    Aeq_E=sps.hstack((G,sps.csr_matrix((nSlack,n_x+1)),-I,I),format='csr')
+    del G
+
+    Aeq=sps.vstack((Aeq_W,Aeq_E),format='csr')
+    beq=np.concatenate((beq_W,np.zeros(nSlack)))
+    return f,Aeq,beq,DAB,WLen,edge_weight
+
+
+def _solve_lp(f,Aeq,beq):
+    res=linprog(f,A_eq=Aeq,b_eq=beq,method='highs-ipm')
     if not res.success:
         raise RuntimeError(f'LP solver failed: {res.message}')
-    return res
+    return res.x,res.fun
 
 
 def _metric_components(dxy,loc_cost,false_cost,miss_cost,edge_cost,p):
@@ -141,6 +183,28 @@ def _metric_components(dxy,loc_cost,false_cost,miss_cost,edge_cost,p):
         return 0.0 if value<=0 else value
     return (clamp(dxy)**(1/p),clamp(loc_cost),clamp(false_cost),
             clamp(miss_cost),clamp(edge_cost))
+
+
+def _components_from_solution(x,obj,DAB,n_x,n_y,WLen,edge_weight,p):
+    Wx=x[:WLen].reshape((n_x+1,n_y+1),order='F')
+    loc_cost=np.sum(DAB[:n_x,:n_y]*Wx[:n_x,:n_y])
+    false_cost=np.sum(DAB[n_x,:n_y]*Wx[n_x,:n_y])
+    miss_cost=np.sum(DAB[:n_x,n_y]*Wx[:n_x,n_y])
+    edge_cost=edge_weight*np.sum(x[WLen:])
+    return _metric_components(obj,loc_cost,false_cost,miss_cost,edge_cost,p)
+
+
+def _graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon,directed,solve):
+    X_attr,Y_attr,X_adj,Y_adj=_check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
+    n_x=X_attr.shape[0]
+    n_y=Y_attr.shape[0]
+
+    if n_x==0 or n_y==0:
+        return _empty_result(n_x,n_y,c,p)
+
+    f,Aeq,beq,DAB,WLen,edge_weight=_build_lp(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon,directed)
+    x,obj=solve(f,Aeq,beq)
+    return _components_from_solution(x,obj,DAB,n_x,n_y,WLen,edge_weight,p)
 
 
 def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
@@ -159,54 +223,7 @@ def LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost.
     The four component costs are returned to the p-th power, so dxy^p equals their sum.
     '''
-    X_attr,Y_attr,X_adj,Y_adj=_check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
-    n_x=X_attr.shape[0]
-    n_y=Y_attr.shape[0]
-
-    if n_x==0 or n_y==0:
-        return _empty_result(n_x,n_y,c,p)
-
-    DAB=locCostComp(X_attr,Y_attr,c,p)
-
-    nxny=n_x*n_y
-    WLen=(n_x+1)*(n_y+1)
-    nParam=WLen+1+nxny
-
-    ############# Objective function ################
-    f=np.zeros(nParam)
-    f[:WLen]=DAB.reshape(WLen,order='F')
-    f[WLen]=epsilon**p/2
-
-    ###########Equality constraints############
-    Aeq,beq=_assignment_constraints(n_x,n_y,nParam)
-
-    ###########Inequality constraints############
-    #Constraint 1: e1 >= sum(h1)
-    A1=sps.hstack((
-        sps.csr_matrix((1,WLen)),
-        sps.csr_matrix(np.array([[-1.0]])),
-        np.ones((1,nxny))),format='csr')
-
-    #Constraints 2 and 3: h1 >= +/- (A_X W - W A_Y)
-    G=sps.hstack((_edge_difference_matrix(n_x,n_y,X_adj,Y_adj),
-                  sps.csr_matrix((nxny,n_x+1))),format='csr')
-    neg_I=-sps.eye(nxny,format='csr')
-    A2=sps.hstack((G,sps.csr_matrix((nxny,1)),neg_I),format='csr')
-    A3=sps.hstack((-G,sps.csr_matrix((nxny,1)),neg_I),format='csr')
-
-    A=sps.vstack((A1,A2,A3),format='csr')
-    b=np.zeros(A.shape[0])
-
-    #Solve the LP
-    res=_solve_lp(f,A,b,Aeq,beq)
-
-    Wx=res.x[:WLen].reshape((n_x+1,n_y+1),order='F')
-    loc_cost=np.sum(DAB[:n_x,:n_y]*Wx[:n_x,:n_y])
-    false_cost=np.sum(DAB[n_x,:n_y]*Wx[n_x,:n_y])
-    miss_cost=np.sum(DAB[:n_x,n_y]*Wx[:n_x,n_y])
-    edge_cost=epsilon**p/2*res.x[WLen]
-
-    return _metric_components(res.fun,loc_cost,false_cost,miss_cost,edge_cost,p)
+    return _graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon,False,_solve_lp)
 
 
 def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
@@ -226,66 +243,4 @@ def LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon):
     graph GOSPA cost, localisation cost, false node cost, miss node cost, edge mismatch cost.
     The four component costs are returned to the p-th power, so dxy^p equals their sum.
     '''
-    X_attr,Y_attr,X_adj,Y_adj=_check_inputs(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
-    n_x=X_attr.shape[0]
-    n_y=Y_attr.shape[0]
-
-    if n_x==0 or n_y==0:
-        return _empty_result(n_x,n_y,c,p)
-
-    DAB=locCostComp(X_attr,Y_attr,c,p)
-
-    nxny=n_x*n_y
-    WLen=(n_x+1)*(n_y+1)
-    nParam=WLen+2+2*nxny
-
-    ############# Objective function ################
-    f=np.zeros(nParam)
-    f[:WLen]=DAB.reshape(WLen,order='F')
-    f[WLen]=epsilon**p/4
-    f[WLen+1]=epsilon**p/4
-
-    ###########Equality constraints############
-    Aeq,beq=_assignment_constraints(n_x,n_y,nParam)
-
-    ###########Inequality constraints############
-    #Constraint 1: e1 >= sum(h1) and e2 >= sum(h2)
-    minus_one=sps.csr_matrix(np.array([[-1.0]]))
-    A1_1=sps.hstack((
-        sps.csr_matrix((1,WLen)),minus_one,sps.csr_matrix((1,1)),
-        np.ones((1,nxny)),sps.csr_matrix((1,nxny))),format='csr')
-    A1_2=sps.hstack((
-        sps.csr_matrix((1,WLen)),sps.csr_matrix((1,1)),minus_one,
-        sps.csr_matrix((1,nxny)),np.ones((1,nxny))),format='csr')
-    A1=sps.vstack((A1_1,A1_2),format='csr')
-
-    #Constraints 2 and 3: h1 >= +/- (A_X W - W A_Y)
-    G1=sps.hstack((_edge_difference_matrix(n_x,n_y,X_adj,Y_adj),
-                   sps.csr_matrix((nxny,n_x+1))),format='csr')
-    #Constraints 4 and 5: h2 >= +/- (A_Y W^T - W^T A_X)
-    G2=sps.hstack((_reverse_edge_difference_matrix(n_x,n_y,X_adj,Y_adj),
-                   sps.csr_matrix((nxny,n_x+1))),format='csr')
-
-    zeros_e=sps.csr_matrix((nxny,2))
-    neg_I_h1=sps.hstack((-sps.eye(nxny,format='csr'),
-                         sps.csr_matrix((nxny,nxny))),format='csr')
-    neg_I_h2=sps.hstack((sps.csr_matrix((nxny,nxny)),
-                         -sps.eye(nxny,format='csr')),format='csr')
-    A2=sps.hstack((G1,zeros_e,neg_I_h1),format='csr')
-    A3=sps.hstack((-G1,zeros_e,neg_I_h1),format='csr')
-    A4=sps.hstack((G2,zeros_e,neg_I_h2),format='csr')
-    A5=sps.hstack((-G2,zeros_e,neg_I_h2),format='csr')
-
-    A=sps.vstack((A1,A2,A3,A4,A5),format='csr')
-    b=np.zeros(A.shape[0])
-
-    #Solve the LP
-    res=_solve_lp(f,A,b,Aeq,beq)
-
-    Wx=res.x[:WLen].reshape((n_x+1,n_y+1),order='F')
-    loc_cost=np.sum(DAB[:n_x,:n_y]*Wx[:n_x,:n_y])
-    false_cost=np.sum(DAB[n_x,:n_y]*Wx[n_x,:n_y])
-    miss_cost=np.sum(DAB[:n_x,n_y]*Wx[:n_x,n_y])
-    edge_cost=epsilon**p/4*(res.x[WLen]+res.x[WLen+1])
-
-    return _metric_components(res.fun,loc_cost,false_cost,miss_cost,edge_cost,p)
+    return _graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon,True,_solve_lp)

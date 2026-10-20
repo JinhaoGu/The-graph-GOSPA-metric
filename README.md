@@ -73,7 +73,7 @@ epsilon=1; %penalty for edge mismatch
 NVIDIA cuOpt, with identical arguments and return values:
 
 ```python
-import graphGOSPA_gpu as M
+import gospa_gpu as M
 
 dxy,loc_cost,false_cost,miss_cost,edge_cost=\
     M.LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
