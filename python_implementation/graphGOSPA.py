@@ -29,6 +29,10 @@
 #
 #The kron identity used below to vectorise matrix products is
 #  vec(A W B) = (B^T kron A) vec(W)
+#Every sps.kron call passes format='csr'. Without it, scipy returns BSR when
+#the second factor is dense enough (2*nnz >= size, e.g. adjacency density
+#>= 0.5). BSR stores whole n x (n+1) blocks, zeros included, which made the
+#LP matrix about 30x larger for complete graphs and crashed scipy at n ~ 500.
 import numpy as np
 import scipy.sparse as sps
 from scipy.optimize import linprog
@@ -159,7 +163,7 @@ def _assignment_constraints(n_x,n_y,nParam):
     #rows are kron(I_{n_y}, ones(1,n_x+1)). The dummy column (the last n_x+1
     #entries of vec(W)) gets zeros.
     Aeq1=sps.hstack((
-        sps.kron(sps.eye(n_y,format='csr'),np.ones((1,n_x+1))),
+        sps.kron(sps.eye(n_y,format='csr'),np.ones((1,n_x+1)),format='csr'),
         sps.csr_matrix((n_y,n_x+1)),
         sps.csr_matrix((n_y,nParam-WLen))),format='csr')
     #Constraint 2: sum_j W(i,j)=1 for every real row i
@@ -169,7 +173,7 @@ def _assignment_constraints(n_x,n_y,nParam):
     keep_x=sps.hstack((sps.eye(n_x,format='csr'),
                        sps.csr_matrix((n_x,1))),format='csr')
     Aeq2=sps.hstack((
-        sps.kron(np.ones((1,n_y+1)),keep_x),
+        sps.kron(np.ones((1,n_y+1)),keep_x,format='csr'),
         sps.csr_matrix((n_x,nParam-WLen))),format='csr')
     beq=np.ones(n_x+n_y)
     return sps.vstack((Aeq1,Aeq2),format='csr'),beq
@@ -195,9 +199,9 @@ def _edge_difference_matrix(n_x,n_y,X_adj,Y_adj):
     keep_x=sps.hstack((sps.eye(n_x,format='csr'),
                        sps.csr_matrix((n_x,1))),format='csr')
     #vec(X_pad W I)     = (I kron X_pad) vec(W)       -> vec(A_X W_r)
-    MX=sps.kron(sps.eye(n_y,format='csr'),X_pad)
+    MX=sps.kron(sps.eye(n_y,format='csr'),X_pad,format='csr')
     #vec(keep_x W A_Y)  = (A_Y^T kron keep_x) vec(W)  -> vec(W_r A_Y)
-    MY=sps.kron(sps.csr_matrix(Y_adj.T),keep_x)
+    MY=sps.kron(sps.csr_matrix(Y_adj.T),keep_x,format='csr')
     return MX-MY
 
 
@@ -215,9 +219,9 @@ def _reverse_edge_difference_matrix(n_x,n_y,X_adj,Y_adj):
     X_pad_t=sps.hstack((sps.csr_matrix(X_adj.T),
                         sps.csr_matrix((n_x,1))),format='csr')
     #vec(keep_x W A_Y^T) = (A_Y kron keep_x) vec(W)    -> vec(W_r A_Y^T)
-    M1=sps.kron(sps.csr_matrix(Y_adj),keep_x)
+    M1=sps.kron(sps.csr_matrix(Y_adj),keep_x,format='csr')
     #vec(X_pad_t W)      = (I kron X_pad_t) vec(W)     -> vec(A_X^T W_r)
-    M2=sps.kron(sps.eye(n_y,format='csr'),X_pad_t)
+    M2=sps.kron(sps.eye(n_y,format='csr'),X_pad_t,format='csr')
     return M1-M2
 
 
