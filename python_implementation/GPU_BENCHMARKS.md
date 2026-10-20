@@ -1,39 +1,150 @@
 # GPU backend: time and memory by graph size
 
-## Current formulation (L1 slacks, PDLP)
+All numbers in this file come from the GPU backend (`gospa_gpu.py`). Each row
+is a single call to `LP_graph_GOSPA` or `LP_graph_GOSPA_directed` with the
+default settings: PDLP, and `presolve="auto"`, which turns presolve off at
+these sizes.
 
-The LP now writes each edge-mismatch block as `G w - s+ + s- = 0`, so the
-edge matrix `G` is stored once instead of twice and the dense `e >= sum(h)`
-row is gone. The constraint matrix has about half the nonzeros, and RAM and
-VRAM drop by about half. The GPU backend also runs PDLP only, instead of
-cuOpt's concurrent mode.
+## Setup
 
-Same A100-SXM4-80GB, cuOpt 26.10.0, `presolve=0`, c=3, p=1, epsilon=1,
-density 0.5. Y is a noisy copy of X: 5% of nodes dropped, 5% of edges flipped.
-These are full `gospa_gpu.LP_graph_GOSPA` calls:
+| | |
+|---|---|
+| GPU | NVIDIA A100-SXM4-80GB (Google Colab), driver 580.82.07 |
+| Software | cuOpt 26.10.00, SciPy 1.16.3, NumPy 2.1.3, Python 3.13 |
+| Parameters | c = 3, p = 1, epsilon = 1, 2-D node attributes |
+| Graphs | X is random with edge density 0.5. Y is a noisy copy of X: 5% of the nodes are dropped, positions get Gaussian noise (sigma 0.3) and 5% of the edges are flipped. |
 
-| n | nonzeros | total time | RAM peak | VRAM peak |
-|---:|---:|---:|---:|---:|
-| 300 | 25.5 M | 3.3 s | 1.7 GB | 2.0 GB |
-| 700 | 320 M | 30.8 s | 15.3 GB | 19.7 GB |
-| 1000 | 926 M | 97.8 s | 44.2 GB | 57.4 GB |
-| 1100 | ~1.23 G | ~125 s | - | 74.9 GB |
+Columns:
 
-Directed graphs: n=300 took 5.9 s with 3.5 GB VRAM; n=600 took 38.7 s with 25.4 GB.
+- **build**: assembling the LP with SciPy on the CPU (`graphGOSPA._build_lp`).
+- **solve**: the call to `gospa_gpu.solve_lp`. This includes building the cuOpt model.
+- **RAM** and **VRAM**: peak process RSS and peak GPU memory during the call.
 
-Concurrent mode compared with PDLP only, at n=300: 6.4 s vs 1.9 s for the
-solve. Dual simplex did not finish in 900 s, and barrier ran out of memory,
-so PDLP always finished first. At n >= 700 the two modes take the same time.
+## Undirected graphs
 
-The largest undirected n that fits on an 80 GB GPU is now about 1100, up
-from about 845.
+| n | variables | nonzeros | build | solve | total | RAM | VRAM |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 28,395 | 0.9 M | 0.05 s | 0.55 s | 0.6 s | 0.9 GB | 0.5 GB |
+| 200 | 113,189 | 7.4 M | 0.30 s | 1.09 s | 1.4 s | 1.1 GB | 0.9 GB |
+| 300 | 258,888 | 25.5 M | 1.20 s | 2.08 s | 3.3 s | 1.8 GB | 2.1 GB |
+| 400 | 466,389 | 61.5 M | 2.82 s | 3.97 s | 6.8 s | 3.5 GB | 4.3 GB |
+| 500 | 711,975 | 116.2 M | 5.33 s | 5.39 s | 10.7 s | 6.0 GB | 7.7 GB |
+| 600 | 1,012,763 | 196.0 M | 9.01 s | 11.81 s | 20.8 s | 9.8 GB | 12.6 GB |
+| 700 | 1,399,967 | 320.2 M | 14.70 s | 19.14 s | 33.9 s | 15.6 GB | 20.2 GB |
+| 800 | 1,808,754 | 469.7 M | 21.62 s | 21.83 s | 43.5 s | 22.6 GB | 29.3 GB |
+| 900 | 2,331,864 | 686.1 M | 31.50 s | 35.20 s | 66.7 s | 32.7 GB | 42.4 GB |
+| 1000 | 2,842,948 | 925.6 M | 42.44 s | 47.81 s | 90.3 s | 44.0 GB | 57.0 GB |
+| 1100 | 3,420,937 | 1220.4 M | 56.19 s | 69.78 s | 126.0 s | 57.8 GB | 74.9 GB |
 
-The rest of this file measures the previous formulation and is kept for
-reference.
+## Directed graphs
 
-Environment: NVIDIA A100-SXM4-80GB, CUDA 13.3, cuOpt 26.10.0, float64,
-`presolve=0`, 2-D node attributes, adjacency density 0.5, c=3, p=1, epsilon=1.
-Times are for one call of `LP_graph_GOSPA`.
+A directed graph has two edge-mismatch blocks (one per direction). The LP
+therefore has about twice the nonzeros of an undirected graph of the same size.
+
+| n | variables | nonzeros | build | solve | total | RAM | VRAM |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 47,195 | 1.9 M | 0.09 s | 0.57 s | 0.7 s | 0.9 GB | 0.6 GB |
+| 200 | 188,389 | 14.7 M | 0.61 s | 1.38 s | 2.0 s | 1.3 GB | 1.4 GB |
+| 300 | 431,088 | 50.8 M | 2.36 s | 3.03 s | 5.4 s | 2.9 GB | 3.7 GB |
+| 400 | 776,789 | 122.9 M | 5.68 s | 6.80 s | 12.5 s | 6.3 GB | 8.1 GB |
+| 500 | 1,185,975 | 232.5 M | 10.99 s | 11.68 s | 22.7 s | 11.5 GB | 14.8 GB |
+| 600 | 1,687,163 | 392.5 M | 17.98 s | 19.65 s | 37.7 s | 19.0 GB | 24.6 GB |
+| 700 | 2,332,367 | 638.5 M | 29.27 s | 41.43 s | 70.7 s | 30.5 GB | 39.6 GB |
+| 800 | 3,013,554 | 939.8 M | 44.61 s | 55.48 s | 100.1 s | 44.6 GB | 57.9 GB |
+
+## Complete graphs
+
+Undirected, edge density 1. Y is X with jittered positions and the same edges.
+
+| n | total | RAM | VRAM |
+|---:|---:|---:|---:|
+| 100 | 1.0 s | 0.9 GB | 0.6 GB |
+| 200 | 4.1 s | 1.3 GB | 1.5 GB |
+| 300 | 8.7 s | 3.1 GB | 3.8 GB |
+| 500 | 52.5 s | 12.3 GB | 15.8 GB |
+| 700 | 160.7 s | 32.8 GB | 42.2 GB |
+
+Before the `kron` fix, the n = 100 case did not finish in 600 s. This was
+true for the `main` branch and for the L1 formulation without the fix. When
+the adjacency density is 0.5 or more, `scipy.sparse.kron` returned BSR
+blocks that stored the zeros too. With the L1 formulation, the LP matrix then had about 50x more stored
+entries than real nonzeros (101 M instead of 2.0 M at n = 100), and a
+directed n = 500 graph crashed SciPy with a segmentation fault. Every `kron`
+call now asks for CSR output.
+
+## Where the memory and time go
+
+The number of nonzeros of the constraint matrix determines both time and
+memory. It grows as n^3, and linearly with the edge density rho:
+
+```text
+nonzeros ~= 1.9 * rho * n^3     undirected
+nonzeros ~= 3.7 * rho * n^3     directed
+```
+
+For n >= 300 each nonzero needs about **62 bytes of VRAM** and **48 bytes of
+RAM**. RAM peaks while SciPy assembles the LP, before cuOpt is called. VRAM
+peaks during the solve.
+
+Fitted VRAM rules for n >= 300 (GB):
+
+```text
+undirected, density 0.5:  VRAM ~= 0.7 + 5.6e-8  * n^3
+directed,   density 0.5:  VRAM ~= 0.8 + 1.12e-7 * n^3
+complete (undirected):    VRAM ~= 0.6 + 1.21e-7 * n^3
+```
+
+The total time also grows roughly as n^3: about 90 ns * n^3 for undirected
+graphs at density 0.5. The CPU build takes about as long as the GPU solve.
+During the build the GPU is idle, so moving the assembly to the GPU is the
+next obvious speed-up.
+
+## Largest n that fits in GPU memory
+
+These values come from the VRAM rules above. The measured range is up to
+n = 1100 (undirected), 800 (directed) and 700 (complete). Values beyond those
+are extrapolations.
+
+| GPU memory | undirected, density 0.5 | directed, density 0.5 | complete |
+|---:|---:|---:|---:|
+| 16 GB | 650 | 510 | 500 |
+| 24 GB | 745 | 590 | 580 |
+| 40 GB | 890 | 705 | 685 |
+| 48 GB | 945 | 750 | 730 |
+| 80 GB | 1120 | 890 | 870 |
+
+Host RAM must also hold the LP while it is built. That is about 0.8x the VRAM
+figure.
+
+## Solver choice
+
+`method="pdlp"` (the default) runs only cuOpt's GPU PDLP solver. cuOpt's
+`"concurrent"` mode also starts dual simplex and barrier on the CPU, and it
+returns only after they stop. On these LPs PDLP always finishes first. Dual
+simplex alone did not finish in 900 s at n = 300, and barrier asked for
+66.7 GB of GPU memory at n = 300 and failed. At n = 300 the solve took
+6.4 s in concurrent mode and 1.9 s with PDLP only. From n = 700 upwards the
+two modes take the same time.
+
+## Comparison with the previous LP formulation
+
+The previous formulation stored the edge-mismatch matrix twice
+(`h >= G w`, `h >= -G w`) and added a dense `e >= sum(h)` row. The
+previous code also used cuOpt's concurrent mode. It was measured on the same
+GPU with the same graphs:
+
+| n | VRAM before → now | RAM before → now | total before → now |
+|---:|---:|---:|---:|
+| 500 | 14.6 → 7.7 GB | 10.7 → 6.0 GB | 18.2 → 10.7 s |
+| 700 | 39.4 → 20.2 GB | 28.3 → 15.6 GB | 50.6 → 33.9 s |
+
+The largest undirected graph that fits in 80 GB went from about 845 to about
+1120 nodes.
+
+The original measurements of the previous formulation are kept below for
+reference. They used 2-D node attributes, adjacency density 0.5, c=3, p=1,
+epsilon=1, `presolve=0`, and cuOpt's default concurrent mode. The `model` column is
+the conversion to cuOpt's `DataModel`.
 
 | n | variables | nonzeros | LP build | model | solve | RAM peak | VRAM peak |
 |---:|---:|---:|---:|---:|---:|---:|---:|
@@ -46,59 +157,10 @@ Times are for one call of `LP_graph_GOSPA`.
 | 700 | 981,402 | 685.4 M | 25.86 s | 8.64 s | 23.20 s | 32.8 GB | 43.0 GB |
 | 800 | 1,281,602 | 1025.1 M | 38.88 s | 12.88 s | 34.67 s | 48.8 GB | 63.6 GB |
 
-`LP build` is the Python/scipy model assembly, `model` is the conversion to
-cuOpt's `DataModel`, and `solve` is `Solve()`.
-
-## Where the memory goes
-
-- **RAM peak** happens while the LP is assembled in Python, before cuOpt is
-  called. `hstack`/`vstack` keep several copies of the constraint matrix
-  alive at once.
-- **VRAM peak** happens during the solve. It grows with the number of
-  nonzeros, which is O(n^3) at fixed density.
-
-## Rules of thumb
-
-For density 0.5 and n >= 200, fitted on the table above:
-
-```text
-RAM  (GB) ~= 0.5 + 9.5e-8 * n^3
-VRAM (GB) ~= 1.3 + 1.22e-7 * n^3
-```
-
-Predicted vs measured:
-
-| n | RAM predicted | RAM measured | VRAM predicted | VRAM measured |
-|---:|---:|---:|---:|---:|
-| 600 | 21.0 GB | 20.9 GB | 27.7 GB | 27.6 GB |
-| 700 | 33.1 GB | 32.8 GB | 43.1 GB | 43.0 GB |
-| 800 | 49.1 GB | 48.8 GB | 63.8 GB | 63.6 GB |
-
-Equivalently, at n >= 300: about **50 bytes of RAM** and **70 bytes of VRAM**
-per nonzero of the constraint matrix. Both scale roughly linearly with the
-adjacency density.
-
-Time also scales as n^3 at fixed density: the solve takes about
-`8.4 s * (n/500)^3` and the Python LP build about `9.6 s * (n/500)^3`.
-
-## Largest n that fits in GPU memory
-
-Solving the VRAM rule for n:
-
-| GPU memory | approximate max n |
-|---:|---:|
-| 12 GB | 450 |
-| 24 GB | 565 |
-| 40 GB | 670 |
-| 80 GB | 845 |
-
-Measured up to n = 800 (63.6 GB). The 80 GB ceiling at n ~ 845 is an
-extrapolation from the fitted curve. At n = 1000 the LP would need roughly
-120 GB of VRAM, so it does not fit on a single 80 GB device.
 
 ## CPU vs GPU
 
-On the same graphs the CPU implementation (`highs-ipm`) takes about 4.6 s at
-n = 50, while the GPU path takes 0.13 s. Above n = 100 the GPU path is the
-only practical option: the CPU side needs minutes at n = 300 and does not
-scale to n = 500.
+From the original measurements: on the same graphs the CPU implementation
+(`highs-ipm`) takes about 4.6 s at n = 50, while the GPU path takes 0.13 s.
+Above n = 100 the GPU path is the only practical option. The CPU solver needs
+minutes at n = 300 and does not scale to n = 500.
