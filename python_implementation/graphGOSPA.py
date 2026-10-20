@@ -13,7 +13,7 @@
 #  W(n_x,n_y)                 : dummy-to-dummy entry. It has no cost and is
 #                               not constrained, so it is always free.
 #Every real row and every real column of W sums to one. W is relaxed to
-#continuous values in [0,1] (the LP relaxation of [1]).
+#continuous values in [0,1], which is the LP relaxation used in the paper above.
 #
 #Objective = node cost + edge cost:
 #  node cost : sum_ij D(i,j) W(i,j), where D is the cost matrix built by locCostComp
@@ -280,10 +280,12 @@ def _build_lp(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon,directed):
     #Edge mismatch: G w - s_plus + s_minus = 0
     #Column layout: [ G | zeros for the dummy column of W | -I (s_plus) | +I (s_minus) ]
     I=sps.eye(nSlack,format='csr')
-    G=sps.vstack(blocks,format='csr')
+    G=blocks[0] if len(blocks)==1 else sps.vstack(blocks,format='csr')
+    #blocks would keep the mismatch matrices alive, so drop it before the copies below
+    del blocks
     Aeq_E=sps.hstack((G,sps.csr_matrix((nSlack,n_x+1)),-I,I),format='csr')
-    #Free G before the final vstack to lower the peak memory; Aeq_E holds a copy
-    del G
+    #Aeq_E holds a copy of G; free G and I before the final vstack to lower the peak memory
+    del G,I
 
     Aeq=sps.vstack((Aeq_W,Aeq_E),format='csr')
     beq=np.concatenate((beq_W,np.zeros(nSlack)))

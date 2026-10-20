@@ -24,17 +24,17 @@ Columns:
 
 | n | variables | nonzeros | build | solve | total | RAM | VRAM |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 100 | 28,395 | 0.9 M | 0.05 s | 0.55 s | 0.6 s | 0.9 GB | 0.5 GB |
-| 200 | 113,189 | 7.4 M | 0.30 s | 1.09 s | 1.4 s | 1.1 GB | 0.9 GB |
-| 300 | 258,888 | 25.5 M | 1.20 s | 2.08 s | 3.3 s | 1.8 GB | 2.1 GB |
-| 400 | 466,389 | 61.5 M | 2.82 s | 3.97 s | 6.8 s | 3.5 GB | 4.3 GB |
-| 500 | 711,975 | 116.2 M | 5.33 s | 5.39 s | 10.7 s | 6.0 GB | 7.7 GB |
-| 600 | 1,012,763 | 196.0 M | 9.01 s | 11.81 s | 20.8 s | 9.8 GB | 12.6 GB |
-| 700 | 1,399,967 | 320.2 M | 14.70 s | 19.14 s | 33.9 s | 15.6 GB | 20.2 GB |
-| 800 | 1,808,754 | 469.7 M | 21.62 s | 21.83 s | 43.5 s | 22.6 GB | 29.3 GB |
-| 900 | 2,331,864 | 686.1 M | 31.50 s | 35.20 s | 66.7 s | 32.7 GB | 42.4 GB |
-| 1000 | 2,842,948 | 925.6 M | 42.44 s | 47.81 s | 90.3 s | 44.0 GB | 57.0 GB |
-| 1100 | 3,420,937 | 1220.4 M | 56.19 s | 69.78 s | 126.0 s | 57.8 GB | 74.9 GB |
+| 100 | 28,395 | 0.9 M | 0.04 s | 0.54 s | 0.6 s | 0.9 GB | 0.5 GB |
+| 200 | 113,189 | 7.4 M | 0.29 s | 1.14 s | 1.4 s | 1.1 GB | 0.9 GB |
+| 300 | 258,888 | 25.5 M | 1.13 s | 2.00 s | 3.1 s | 1.5 GB | 2.1 GB |
+| 400 | 466,389 | 61.5 M | 2.70 s | 3.78 s | 6.5 s | 2.7 GB | 4.3 GB |
+| 500 | 711,975 | 116.2 M | 5.09 s | 4.96 s | 10.1 s | 4.7 GB | 7.7 GB |
+| 600 | 1,012,763 | 196.0 M | 8.53 s | 11.13 s | 19.7 s | 7.5 GB | 12.6 GB |
+| 700 | 1,399,967 | 320.2 M | 14.18 s | 18.08 s | 32.3 s | 11.8 GB | 20.1 GB |
+| 800 | 1,808,754 | 469.7 M | 20.40 s | 20.18 s | 40.6 s | 17.1 GB | 29.3 GB |
+| 900 | 2,331,864 | 686.1 M | 29.50 s | 32.99 s | 62.5 s | 24.7 GB | 42.4 GB |
+| 1000 | 2,842,948 | 925.6 M | 40.21 s | 45.65 s | 85.9 s | 33.1 GB | 57.0 GB |
+| 1100 | 3,420,937 | 1220.4 M | 53.04 s | 65.78 s | 118.9 s | 43.5 GB | 74.9 GB |
 
 ## Directed graphs
 
@@ -44,13 +44,13 @@ therefore has about twice the nonzeros of an undirected graph of the same size.
 | n | variables | nonzeros | build | solve | total | RAM | VRAM |
 |---:|---:|---:|---:|---:|---:|---:|---:|
 | 100 | 47,195 | 1.9 M | 0.09 s | 0.57 s | 0.7 s | 0.9 GB | 0.6 GB |
-| 200 | 188,389 | 14.7 M | 0.61 s | 1.38 s | 2.0 s | 1.3 GB | 1.4 GB |
-| 300 | 431,088 | 50.8 M | 2.36 s | 3.03 s | 5.4 s | 2.9 GB | 3.7 GB |
-| 400 | 776,789 | 122.9 M | 5.68 s | 6.80 s | 12.5 s | 6.3 GB | 8.1 GB |
-| 500 | 1,185,975 | 232.5 M | 10.99 s | 11.68 s | 22.7 s | 11.5 GB | 14.8 GB |
-| 600 | 1,687,163 | 392.5 M | 17.98 s | 19.65 s | 37.7 s | 19.0 GB | 24.6 GB |
-| 700 | 2,332,367 | 638.5 M | 29.27 s | 41.43 s | 70.7 s | 30.5 GB | 39.6 GB |
-| 800 | 3,013,554 | 939.8 M | 44.61 s | 55.48 s | 100.1 s | 44.6 GB | 57.9 GB |
+| 200 | 188,389 | 14.7 M | 0.66 s | 1.34 s | 2.0 s | 1.2 GB | 1.4 GB |
+| 300 | 431,088 | 50.8 M | 2.44 s | 2.85 s | 5.3 s | 2.4 GB | 3.7 GB |
+| 400 | 776,789 | 122.9 M | 5.78 s | 6.33 s | 12.1 s | 4.9 GB | 8.1 GB |
+| 500 | 1,185,975 | 232.5 M | 10.99 s | 10.56 s | 21.6 s | 8.8 GB | 14.8 GB |
+| 600 | 1,687,163 | 392.5 M | 18.54 s | 18.34 s | 36.9 s | 14.4 GB | 24.6 GB |
+| 700 | 2,332,367 | 638.5 M | 30.31 s | 39.40 s | 69.7 s | 23.1 GB | 39.6 GB |
+| 800 | 3,013,554 | 939.8 M | 44.79 s | 51.79 s | 96.6 s | 33.7 GB | 57.9 GB |
 
 ## Complete graphs
 
@@ -59,10 +59,10 @@ Undirected, edge density 1. Y is X with jittered positions and the same edges.
 | n | total | RAM | VRAM |
 |---:|---:|---:|---:|
 | 100 | 1.0 s | 0.9 GB | 0.6 GB |
-| 200 | 4.1 s | 1.3 GB | 1.5 GB |
-| 300 | 8.7 s | 3.1 GB | 3.8 GB |
-| 500 | 52.5 s | 12.3 GB | 15.8 GB |
-| 700 | 160.7 s | 32.8 GB | 42.2 GB |
+| 200 | 4.0 s | 1.3 GB | 1.5 GB |
+| 300 | 8.3 s | 2.5 GB | 3.9 GB |
+| 500 | 50.7 s | 9.4 GB | 15.8 GB |
+| 700 | 156.4 s | 24.7 GB | 42.2 GB |
 
 Before the `kron` fix, the n = 100 case did not finish in 600 s. This was
 true for the `main` branch and for the L1 formulation without the fix. When
@@ -82,7 +82,7 @@ nonzeros ~= 1.9 * rho * n^3     undirected
 nonzeros ~= 3.7 * rho * n^3     directed
 ```
 
-For n >= 300 each nonzero needs about **62 bytes of VRAM** and **48 bytes of
+For n >= 300 each nonzero needs about **62 bytes of VRAM** and **36 bytes of
 RAM**. RAM peaks while SciPy assembles the LP, before cuOpt is called. VRAM
 peaks during the solve.
 
@@ -113,7 +113,7 @@ are extrapolations.
 | 48 GB | 945 | 750 | 730 |
 | 80 GB | 1120 | 890 | 870 |
 
-Host RAM must also hold the LP while it is built. That is about 0.8x the VRAM
+Host RAM must also hold the LP while it is built. That is about 0.6x the VRAM
 figure.
 
 ## Solver choice
@@ -135,8 +135,8 @@ GPU with the same graphs:
 
 | n | VRAM before → now | RAM before → now | total before → now |
 |---:|---:|---:|---:|
-| 500 | 14.6 → 7.7 GB | 10.7 → 6.0 GB | 18.2 → 10.7 s |
-| 700 | 39.4 → 20.2 GB | 28.3 → 15.6 GB | 50.6 → 33.9 s |
+| 500 | 14.6 → 7.7 GB | 10.7 → 4.7 GB | 18.2 → 10.1 s |
+| 700 | 39.4 → 20.1 GB | 28.3 → 11.8 GB | 50.6 → 32.3 s |
 
 The largest undirected graph that fits in 80 GB went from about 845 to about
 1120 nodes.
