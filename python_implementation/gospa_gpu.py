@@ -25,10 +25,10 @@ memory, so they never win.
 
 Accuracy
 --------
-presolve=True reproduces the CPU result to solver tolerance (tolerance,
-default 1e-8). presolve=False is 4-8x faster on large graphs (n >= 300) but
-the objective is accurate to ~1e-9 relative, not bit-identical.
-presolve="auto" (default) turns presolve off above PRESOLVE_VAR_THRESHOLD.
+Results agree with the CPU solver to the optimality tolerance (tolerance,
+default 1e-8); the largest relative difference in dxy measured on random
+graphs was 2.5e-9. Presolve is slow on large models, so presolve="auto"
+(default) turns it off above PRESOLVE_VAR_THRESHOLD variables.
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ def solve_lp(c, A_ub, b_ub, A_eq, b_eq, *, presolve="auto",
     c = np.ascontiguousarray(c, dtype=np.float64).ravel()
     n = c.size
     # The graph GOSPA LP built by graphGOSPA._build_lp has equality
-    # constraints only; an empty inequality block keeps the code below generic.
+    # constraints only (A_ub is None).
     if A_ub is None:
         A_ub = sps.csr_matrix((0, n))
         b_ub = np.zeros(0)
@@ -113,7 +113,12 @@ def solve_lp(c, A_ub, b_ub, A_eq, b_eq, *, presolve="auto",
     # one matrix:
     #   inequality rows: -inf <= A_ub x <= b_ub
     #   equality rows:   b_eq <= A_eq x <= b_eq
-    G = sps.vstack([A_ub, A_eq], format="csr")
+    # Without inequality rows, use A_eq directly: vstack would copy the whole
+    # matrix, which is the largest object in host memory.
+    if A_ub.shape[0] == 0:
+        G = A_eq.tocsr()
+    else:
+        G = sps.vstack([A_ub, A_eq], format="csr")
     # cuOpt takes int32 CSR indices; casting larger values would wrap silently.
     if G.nnz > _INT32_MAX or n > _INT32_MAX:
         raise ValueError(
@@ -129,8 +134,7 @@ def solve_lp(c, A_ub, b_ub, A_eq, b_eq, *, presolve="auto",
         np.ascontiguousarray(G.indices, dtype=np.int32),
         np.ascontiguousarray(G.indptr, dtype=np.int32),
     )
-    # The scipy matrix is no longer needed; free it before the solve so that
-    # host memory peaks only once.
+    # Drop the local reference; a copy made by vstack is freed here.
     del G
     dm.set_constraint_lower_bounds(lower)
     dm.set_constraint_upper_bounds(upper)
