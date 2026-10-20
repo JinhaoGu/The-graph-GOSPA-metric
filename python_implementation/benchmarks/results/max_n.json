@@ -1,0 +1,77 @@
+[
+{
+"gpu_gb": 16,
+"graph": "Undirected",
+"max_n": 650
+},
+{
+"gpu_gb": 16,
+"graph": "Directed",
+"max_n": 510
+},
+{
+"gpu_gb": 16,
+"graph": "Complete",
+"max_n": 500
+},
+{
+"gpu_gb": 24,
+"graph": "Undirected",
+"max_n": 745
+},
+{
+"gpu_gb": 24,
+"graph": "Directed",
+"max_n": 590
+},
+{
+"gpu_gb": 24,
+"graph": "Complete",
+"max_n": 580
+},
+{
+"gpu_gb": 40,
+"graph": "Undirected",
+"max_n": 890
+},
+{
+"gpu_gb": 40,
+"graph": "Directed",
+"max_n": 705
+},
+{
+"gpu_gb": 40,
+"graph": "Complete",
+"max_n": 685
+},
+{
+"gpu_gb": 48,
+"graph": "Undirected",
+"max_n": 945
+},
+{
+"gpu_gb": 48,
+"graph": "Directed",
+"max_n": 750
+},
+{
+"gpu_gb": 48,
+"graph": "Complete",
+"max_n": 730
+},
+{
+"gpu_gb": 80,
+"graph": "Undirected",
+"max_n": 1120
+},
+{
+"gpu_gb": 80,
+"graph": "Directed",
+"max_n": 890
+},
+{
+"gpu_gb": 80,
+"graph": "Complete",
+"max_n": 870
+}
+]

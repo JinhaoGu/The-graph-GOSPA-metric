@@ -1,0 +1,26 @@
+[
+{
+"code": "main_before_3",
+"label": "main before #3",
+"total_s": null,
+"finished": false,
+"limit_s": 600,
+"stored_entries_m": null
+},
+{
+"code": "before_fix",
+"label": "L1 formulation, before the kron fix",
+"total_s": null,
+"finished": false,
+"limit_s": 600,
+"stored_entries_m": 101.0
+},
+{
+"code": "after_fix",
+"label": "After the kron fix",
+"total_s": 1.0,
+"finished": true,
+"limit_s": 600,
+"stored_entries_m": 2.0
+}
+]

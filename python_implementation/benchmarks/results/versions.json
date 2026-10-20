@@ -1,0 +1,110 @@
+[
+{
+"version": "Original",
+"step": 0,
+"n": 500,
+"total_s": 18.24,
+"ram_gb": 10.7,
+"vram_gb": 14.6,
+"fits_80gb": true
+},
+{
+"version": "Original",
+"step": 0,
+"n": 700,
+"total_s": 50.56,
+"ram_gb": 28.3,
+"vram_gb": 39.4,
+"fits_80gb": true
+},
+{
+"version": "Original",
+"step": 0,
+"n": 1100,
+"total_s": null,
+"ram_gb": null,
+"vram_gb": null,
+"fits_80gb": false
+},
+{
+"version": "#3 L1 + PDLP",
+"step": 1,
+"n": 500,
+"total_s": 10.72,
+"ram_gb": 6.0,
+"vram_gb": 7.7,
+"fits_80gb": true
+},
+{
+"version": "#3 L1 + PDLP",
+"step": 1,
+"n": 700,
+"total_s": 33.86,
+"ram_gb": 15.6,
+"vram_gb": 20.2,
+"fits_80gb": true
+},
+{
+"version": "#3 L1 + PDLP",
+"step": 1,
+"n": 1100,
+"total_s": 126.02,
+"ram_gb": 57.8,
+"vram_gb": 74.9,
+"fits_80gb": true
+},
+{
+"version": "#4 Memory fixes",
+"step": 2,
+"n": 500,
+"total_s": 10.05,
+"ram_gb": 4.7,
+"vram_gb": 7.7,
+"fits_80gb": true
+},
+{
+"version": "#4 Memory fixes",
+"step": 2,
+"n": 700,
+"total_s": 32.27,
+"ram_gb": 11.8,
+"vram_gb": 20.1,
+"fits_80gb": true
+},
+{
+"version": "#4 Memory fixes",
+"step": 2,
+"n": 1100,
+"total_s": 118.88,
+"ram_gb": 43.5,
+"vram_gb": 74.9,
+"fits_80gb": true
+},
+{
+"version": "#5 GPU assembly",
+"step": 3,
+"n": 500,
+"total_s": 7.03,
+"ram_gb": 3.6,
+"vram_gb": 8.3,
+"fits_80gb": true
+},
+{
+"version": "#5 GPU assembly",
+"step": 3,
+"n": 700,
+"total_s": 23.55,
+"ram_gb": 8.4,
+"vram_gb": 20.2,
+"fits_80gb": true
+},
+{
+"version": "#5 GPU assembly",
+"step": 3,
+"n": 1100,
+"total_s": 86.55,
+"ram_gb": 29.6,
+"vram_gb": 74.9,
+"fits_80gb": true
+}
+]

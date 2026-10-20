@@ -1,0 +1,26 @@
+[
+{
+"n": 300,
+"method": "Concurrent",
+"solve_s": 6.4,
+"gpu_util_pct": 17.9
+},
+{
+"n": 300,
+"method": "PDLP only",
+"solve_s": 1.86,
+"gpu_util_pct": 47.8
+},
+{
+"n": 700,
+"method": "Concurrent",
+"solve_s": 16.5,
+"gpu_util_pct": 74.9
+},
+{
+"n": 700,
+"method": "PDLP only",
+"solve_s": 16.48,
+"gpu_util_pct": 74.9
+}
+]

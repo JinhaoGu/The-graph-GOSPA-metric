@@ -144,5 +144,25 @@ For example, an undirected graph pair with n = 1000 at density 0.5 takes 60 s
 and 57 GB of GPU memory. The machine also needs host RAM of about 0.4x the GPU
 memory, because cuOpt keeps a copy of the LP on the host.
 
-Full measurements, time scaling and a comparison with the previous LP
+![Total time per graph pair against n](python_implementation/benchmarks/figures/time_vs_n.png)
+
+### Many small graphs
+
+The GPU calls have a fixed cost of about 0.1 to 0.2 s each. To compare many
+pairs with fewer than about 100 nodes, run several at once:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+import gospa_gpu as M
+
+with ThreadPoolExecutor(8) as ex:
+    results = list(ex.map(lambda g: M.LP_graph_GOSPA(*g, c, p, epsilon), pairs))
+```
+
+Here `pairs` is a list of `(X_attr, Y_attr, X_adj, Y_adj)` tuples. With 8
+threads, a pair with n = 50 to 100 takes about 80 to 130 ms on an A100. Below
+about 40 nodes, the CPU version `graphGOSPA.LP_graph_GOSPA` in a
+`ProcessPoolExecutor` with one process per core is faster.
+
+Full measurements, time scaling, figures and a comparison with the previous LP
 formulation are in [GPU_BENCHMARKS.md](python_implementation/GPU_BENCHMARKS.md).

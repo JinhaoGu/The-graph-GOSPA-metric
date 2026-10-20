@@ -1,0 +1,170 @@
+[
+{
+"n": 20,
+"mode": "gpu_seq",
+"pairs": 32,
+"per_pair_ms": 126.4
+},
+{
+"n": 20,
+"mode": "gpu_thr2",
+"pairs": 32,
+"per_pair_ms": 73.3
+},
+{
+"n": 20,
+"mode": "gpu_thr4",
+"pairs": 32,
+"per_pair_ms": 56.4
+},
+{
+"n": 20,
+"mode": "gpu_thr8",
+"pairs": 32,
+"per_pair_ms": 66.9
+},
+{
+"n": 20,
+"mode": "cpu_seq",
+"pairs": 32,
+"per_pair_ms": 33.5
+},
+{
+"n": 20,
+"mode": "cpu_proc12",
+"pairs": 32,
+"per_pair_ms": 12.2
+},
+{
+"n": 35,
+"mode": "gpu_seq",
+"pairs": 32,
+"per_pair_ms": 146.3
+},
+{
+"n": 35,
+"mode": "gpu_thr4",
+"pairs": 32,
+"per_pair_ms": 63.9
+},
+{
+"n": 35,
+"mode": "cpu_seq",
+"pairs": 32,
+"per_pair_ms": 247.7
+},
+{
+"n": 35,
+"mode": "cpu_proc12",
+"pairs": 32,
+"per_pair_ms": 44.9
+},
+{
+"n": 50,
+"mode": "gpu_seq",
+"pairs": 32,
+"per_pair_ms": 190.3
+},
+{
+"n": 50,
+"mode": "gpu_thr2",
+"pairs": 32,
+"per_pair_ms": 109.9
+},
+{
+"n": 50,
+"mode": "gpu_thr4",
+"pairs": 32,
+"per_pair_ms": 82.9
+},
+{
+"n": 50,
+"mode": "gpu_thr8",
+"pairs": 32,
+"per_pair_ms": 81.1
+},
+{
+"n": 50,
+"mode": "cpu_seq",
+"pairs": 32,
+"per_pair_ms": 1444.1
+},
+{
+"n": 50,
+"mode": "cpu_proc12",
+"pairs": 32,
+"per_pair_ms": 226.9
+},
+{
+"n": 70,
+"mode": "gpu_seq",
+"pairs": 32,
+"per_pair_ms": 204.9
+},
+{
+"n": 70,
+"mode": "gpu_thr4",
+"pairs": 32,
+"per_pair_ms": 128.8
+},
+{
+"n": 70,
+"mode": "gpu_thr8",
+"pairs": 32,
+"per_pair_ms": 123.7
+},
+{
+"n": 70,
+"mode": "cpu_proc12",
+"pairs": 24,
+"per_pair_ms": 2757.3
+},
+{
+"n": 100,
+"mode": "gpu_seq",
+"pairs": 32,
+"per_pair_ms": 233.9
+},
+{
+"n": 100,
+"mode": "gpu_thr2",
+"pairs": 32,
+"per_pair_ms": 167.7
+},
+{
+"n": 100,
+"mode": "gpu_thr4",
+"pairs": 32,
+"per_pair_ms": 149.9
+},
+{
+"n": 100,
+"mode": "gpu_thr8",
+"pairs": 32,
+"per_pair_ms": 126.4
+},
+{
+"n": 100,
+"mode": "cpu_proc12",
+"pairs": 24,
+"per_pair_ms": 37954.8
+},
+{
+"n": 100,
+"mode": "cpu_seq",
+"pairs": 4,
+"per_pair_ms": 213287.8
+},
+{
+"n": 20,
+"mode": "gpu_seq_presolve_off",
+"pairs": 32,
+"per_pair_ms": 170.8
+},
+{
+"n": 50,
+"mode": "gpu_seq_presolve_off",
+"pairs": 32,
+"per_pair_ms": 244.0
+}
+]
