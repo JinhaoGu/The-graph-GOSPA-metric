@@ -139,8 +139,8 @@ Largest graph that fits, from measurements on an A100 80 GB:
 | 40 GB | ~890 | ~705 | ~685 |
 | 80 GB | ~1120 | ~890 | ~870 |
 
-For example, an undirected graph pair with n = 1000 at density 0.5 takes 90 s
-and 57 GB of GPU memory. The machine also needs host RAM of about 0.8x the GPU
+For example, an undirected graph pair with n = 1000 at density 0.5 takes 86 s
+and 57 GB of GPU memory. The machine also needs host RAM of about 0.6x the GPU
 memory, because the LP is assembled on the CPU.
 
 Full measurements, time scaling and a comparison with the previous LP
