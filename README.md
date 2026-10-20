@@ -38,6 +38,8 @@ dxy,loc_cost,false_cost,miss_cost,edge_cost=LP_graph_GOSPA_directed(X_attr,Y_att
 
 ```
 
+`python_implementation/graphGOSPA_original.py` keeps the original CPU implementation, with the earlier LP formulation, for reference and comparison. It has the same functions and returns the same values. The full repository state before that change is tagged `original-cpu-version`.
+
 ### MATLAB:
 
 ```MATLAB
@@ -69,17 +71,77 @@ epsilon=1; %penalty for edge mismatch
 
 ## GPU backend (optional)
 
-`python_implementation/gospa_gpu.py` provides the same functions backed by
-NVIDIA cuOpt, with identical arguments and return values:
+`python_implementation/gospa_gpu.py` solves the same LP with the
+[NVIDIA cuOpt](https://github.com/NVIDIA/cuopt) GPU solver. The functions have
+the same names, arguments and return values as in `graphGOSPA.py`. The LP is
+built by the same code, so only the solver changes.
 
-```python
-import graphGOSPA_gpu as M
+Use the GPU backend when the graphs have more than about 50 nodes. At that size
+the CPU solver already takes seconds, and from a few hundred nodes it needs
+minutes or does not finish (see [GPU_BENCHMARKS.md](python_implementation/GPU_BENCHMARKS.md)).
 
-dxy,loc_cost,false_cost,miss_cost,edge_cost=\
-    M.LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
+### Requirements and installation
+
+- Linux, and an NVIDIA GPU with a recent driver. Google Colab GPU runtimes work.
+- numpy and scipy, plus cuOpt:
+
+```bash
+pip install --extra-index-url https://pypi.nvidia.com cuopt-cu13
 ```
 
-Install with
-`pip install --extra-index-url https://pypi.nvidia.com cuopt-cu13`
-(Linux and an NVIDIA GPU are required). Timings and memory use by graph size
-are in [GPU_BENCHMARKS.md](python_implementation/GPU_BENCHMARKS.md).
+Check the installation:
+
+```python
+import gospa_gpu
+print(gospa_gpu.gpu_status())   # {'available': True, ...}
+```
+
+### Usage
+
+Put `gospa_gpu.py` next to `graphGOSPA.py` and call it like the CPU version:
+
+```python
+import gospa_gpu as M
+
+# undirected graphs
+dxy,loc_cost,false_cost,miss_cost,edge_cost=\
+    M.LP_graph_GOSPA(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
+
+# directed graphs
+dxy,loc_cost,false_cost,miss_cost,edge_cost=\
+    M.LP_graph_GOSPA_directed(X_attr,Y_attr,X_adj,Y_adj,c,p,epsilon)
+```
+
+Optional keyword arguments:
+
+| argument | default | meaning |
+|---|---|---|
+| `method` | `"pdlp"` | cuOpt algorithm: `"pdlp"`, `"concurrent"`, `"barrier"` or `"dual_simplex"`. Keep `"pdlp"`: the other solvers run on the CPU or run out of memory on these LPs, and they never finish first. |
+| `presolve` | `"auto"` | `"auto"` enables presolve up to 10,000 LP variables (about 57 nodes per graph for undirected graphs, 44 for directed ones) and disables it above, where it is slow. Pass `True` or `False` to force it. |
+| `tolerance` | `1e-8` | Relative optimality tolerance. Results match the CPU solver to about 1e-8 relative. |
+| `time_limit` | `1800` | Time limit in seconds. |
+
+If cuOpt stops before reaching an optimal solution (time limit or numerical
+trouble), a `RuntimeError` is raised. A non-optimal solution is never
+returned, because it would overestimate the metric.
+
+### Memory and graph size
+
+GPU memory grows with the number of nonzeros of the constraint matrix. For
+dense graphs that is O(n^3), where n is the number of nodes.
+
+Largest graph that fits, from measurements on an A100 80 GB:
+
+| GPU memory | undirected, density 0.5 | directed, density 0.5 | complete graphs |
+|---:|---:|---:|---:|
+| 16 GB | ~650 nodes | ~510 | ~500 |
+| 24 GB | ~745 | ~590 | ~580 |
+| 40 GB | ~890 | ~705 | ~685 |
+| 80 GB | ~1120 | ~890 | ~870 |
+
+For example, an undirected graph pair with n = 1000 at density 0.5 takes 90 s
+and 57 GB of GPU memory. The machine also needs host RAM of about 0.8x the GPU
+memory, because the LP is assembled on the CPU.
+
+Full measurements, time scaling and a comparison with the previous LP
+formulation are in [GPU_BENCHMARKS.md](python_implementation/GPU_BENCHMARKS.md).
